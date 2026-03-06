@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D-HRS v2.0 - Decentralized HR System</title>
+    <script src="https://cdn.jsdelivr.net/npm/viem@2.21.35/dist/viem.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+        .container { min-height: 100vh; }
+        
+        header { background: var(--surface); border-bottom: 1px solid #e2e8f0; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo h1 { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .logo span { font-size: 0.875rem; color: var(--text-light); }
+        
+        .header-right { display: flex; align-items: center; gap: 1rem; }
+        .network-badge { padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 500; }
+        .network-badge.sepolia { background: #fef3c7; color: #92400e; }
+        .network-badge.localhost { background: #d1fae5; color: #065f46; }
+        .network-badge.unknown { background: #f3f4f6; color: #6b7280; }
+        
+        .wallet-btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+        .wallet-btn:hover { background: var(--primary-dark); }
+        .wallet-btn.connected { background: var(--success); }
+        .wallet-address { font-family: monospace; font-size: 0.875rem; }
+        
+        nav { background: var(--surface); border-bottom: 1px solid #e2e8f0; padding: 0 2rem; display: flex; gap: 0.5rem; }
+        nav button { background: none; border: none; padding: 1rem 1.5rem; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: var(--text-light); border-bottom: 2px solid transparent; }
+        nav button:hover { color: var(--text); }
+        nav button.active { color: var(--primary); border-bottom-color: var(--primary); }
+        
+        main { padding: 2rem; max-width: 1400px; margin: 0 auto; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: var(--surface); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; }
+        .stat-card h3 { font-size: 0.875rem; color: var(--text-light); margin-bottom: 0.5rem; }
+        .stat-value { font-size: 2rem; font-weight: 700; }
+        
+        table { width: 100%; background: var(--surface); border-radius: 0.75rem; border: 1px solid #e2e8f0; border-collapse: collapse; overflow: hidden; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: var(--bg); font-weight: 600; font-size: 0.875rem; color: var(--text-light); }
+        
+        .btn { background: var(--primary); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-weight: 500; }
+        .btn:hover { background: var(--primary-dark); }
+        .btn:disabled { background: var(--text-light); cursor: not-allowed; }
+        
+        .section { display: none; }
+        .section.active { display: block; }
+        
+        .contract-item { display: flex; justify-content: space-between; padding: 0.75rem; background: var(--bg); border-radius: 0.5rem; margin-bottom: 0.5rem; align-items: center; }
+        .contract-name { font-weight: 500; }
+        .contract-address { font-family: monospace; color: var(--text-light); font-size: 0.875rem; }
+        .contract-address a { color: var(--primary); text-decoration: none; }
+        
+        .proposal-card { background: var(--surface); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; margin-bottom: 1rem; }
+        .proposal-card h3 { margin-bottom: 0.5rem; }
+        .proposal-card p { color: var(--text-light); font-size: 0.875rem; margin-bottom: 1rem; }
+        .votes { display: flex; gap: 1rem; }
+        .vote { padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.875rem; }
+        .vote.for { background: #d1fae5; color: #065f46; }
+        .vote.against { background: #fee2e2; color: #991b1b; }
+        
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; font-size: 1rem; }
+        
+        footer { background: var(--surface); border-top: 1px solid #e2e8f0; padding: 1rem 2rem; text-align: center; color: var(--text-light); font-size: 0.875rem; }
+        
+        .alert { padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+        .alert.success { background: #d1fae5; color: #065f46; }
+        .alert.error { background: #fee2e2; color: #991b1b; }
+        .alert.info { background: #dbeafe; color: #1e40af; }
+        
+        .loading { opacity: 0.6; pointer-events: none; }
+        
+        .connection-status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .status-dot.connected { background: var(--success); }
+        .status-dot.disconnected { background: var(--danger); }
+        .status-dot.connecting { background: var(--warning); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <h1>D-HRS v2.0</h1>
+                <span>Decentralized Human Resources System</span>
+            </div>
+            <div class="header-right">
+                <div class="connection-status" id="connection-status">
+                    <span class="status-dot disconnected"></span>
+                    <span>Disconnected</span>
+                </div>
+                <div class="network-badge unknown" id="network-badge">Unknown Network</div>
+                <button class="wallet-btn" id="wallet-btn" onclick="connectWallet()">
+                    <span id="wallet-text">Connect Wallet</span>
+                </button>
+            </div>
+        </header>
+        
+        <nav>
+            <button class="active" onclick="showSection('dashboard')">Dashboard</button>
+            <button onclick="showSection('employees')">Employees</button>
+            <button onclick="showSection('credentials')">Credentials</button>
+            <button onclick="showSection('payroll')">Payroll</button>
+            <button onclick="showSection('governance')">Governance</button>
+            <button onclick="showSection('contracts')">Contracts</button>
+        </nav>
+        
+        <main>
+            <div id="alert-container"></div>
+            
+            <!-- Dashboard -->
+            <div id="dashboard" class="section active">
+                <h2>System Overview</h2>
+                <br>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Employees</h3>
+                        <p class="stat-value" id="total-employees">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Employees</h3>
+                        <p class="stat-value" id="active-employees">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Credentials</h3>
+                        <p class="stat-value" id="total-credentials">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pending Payroll</h3>
+                        <p class="stat-value" id="pending-payroll">-</p>
+                    </div>
+                </div>
+                
+                <h3>Recent Activity</h3>
+                <br>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Action</th>
+                            <th>User</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activity-log">
+                        <tr><td colspan="4" style="text-align:center;color:var(--text-light)">Connect wallet to view activity</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Employees -->
+            <div id="employees" class="section">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                    <h2>Employee Management</h2>
+                    <button class="btn" id="add-employee-btn" onclick="showAddEmployee()" disabled>+ Add Employee</button>
+                </div>
+                <div id="add-employee-form" style="display:none;background:var(--surface);padding:1.5rem;border-radius:0.75rem;margin-bottom:1.5rem;border:1px solid #e2e8f0;">
+                    <h3>Register New Employee</h3>
+                    <p style="color:var(--text-light);font-size:0.875rem;margin-bottom:1rem;">This will interact with the EmployeeRegistry smart contract</p>
+                    <div class="form-group">
+                        <label>Employee Wallet Address</label>
+                        <input type="text" id="emp-wallet" placeholder="0x...">
+                    </div>
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="emp-name" placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <input type="text" id="emp-role" placeholder="Software Engineer">
+                    </div>
+                    <div class="form-group">
+                        <label>Department</label>
+                        <select id="emp-dept">
+                            <option value="Engineering">Engineering</option>
+                            <option value="Design">Design</option>
+                            <option value="Product">Product</option>
+                            <option value="HR">HR</option>
+                            <option value="Finance">Finance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Annual Salary (USD)</label>
+                        <input type="number" id="emp-salary" placeholder="100000">
+                    </div>
+                    <button class="btn" onclick="registerEmployee()" id="register-btn">Register on Blockchain</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>DID</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Department</th>
+                            <th>Salary</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employee-table">
+                        <tr><td colspan="6" style="text-align:center;color:var(--text-light)">Connect wallet to view employees</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Credentials -->
+            <div id="credentials" class="section">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                    <h2>Verifiable Credentials</h2>
+                    <button class="btn" onclick="showIssueCredential()" id="issue-credential-btn" disabled>+ Issue Credential</button>
+                </div>
+                <div id="issue-credential-form" style="display:none;background:var(--surface);padding:1.5rem;border-radius:0.75rem;margin-bottom:1.5rem;border:1px solid #e2e8f0;">
+                    <h3>Issue Verifiable Credential</h3>
+                    <div class="form-group">
+                        <label>Recipient Wallet Address</label>
+                        <input type="text" id="cred-recipient" placeholder="0x...">
+                    </div>
+                    <div class="form-group">
+                        <label>Credential Type</label>
+                        <select id="cred-type">
+                            <option value="EmploymentCredential">Employment Credential</option>
+                            <option value="Certification">Certification</option>
+                            <option value="TrainingCompletion">Training Completion</option>
+                            <option value="PerformanceReview">Performance Review</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Credential Data (URI or JSON)</label>
+                        <input type="text" id="cred-data" placeholder="ipfs://... or {json data}">
+                    </div>
+                    <button class="btn" onclick="issueCredential()" id="issue-btn">Issue Credential</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Credential ID</th>
+                            <th>Type</th>
+                            <th>Subject</th>
+                            <th>Issuer</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="credentials-table">
+                        <tr><td colspan="5" style="text-align:center;color:var(--text-light)">Connect wallet to view credentials</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Payroll -->
+            <div id="payroll" class="section">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                    <h2>Payroll Management</h2>
+                    <button class="btn" onclick="showCreatePayroll()" id="create-payroll-btn" disabled>+ Create Payroll Run</button>
+                </div>
+                <div id="create-payroll-form" style="display:none;background:var(--surface);padding:1.5rem;border-radius:0.75rem;margin-bottom:1.5rem;border:1px solid #e2e8f0;">
+                    <h3>Create Payroll Run</h3>
+                    <div class="form-group">
+                        <label>Period (Month/Year)</label>
+                        <input type="text" id="payroll-period" placeholder="January 2024">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Amount (in HR Tokens)</label>
+                        <input type="number" id="payroll-amount" placeholder="21000">
+                    </div>
+                    <button class="btn" onclick="createPayroll()" id="payroll-btn">Execute Payroll</button>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Current Period</h3>
+                        <p class="stat-value" id="current-period">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Amount</h3>
+                        <p class="stat-value" id="payroll-total">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Employees</h3>
+                        <p class="stat-value" id="payroll-employees">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Status</h3>
+                        <p class="stat-value" id="payroll-status">-</p>
+                    </div>
+                </div>
+                <h3>Payroll History</h3>
+                <br>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Total Amount</th>
+                            <th>Employees</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payroll-history">
+                        <tr><td colspan="5" style="text-align:center;color:var(--text-light)">Connect wallet to view payroll</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Governance -->
+            <div id="governance" class="section">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                    <h2>HR Governance</h2>
+                    <button class="btn" onclick="showCreateProposal()" id="create-proposal-btn" disabled>+ Create Proposal</button>
+                </div>
+                <div id="create-proposal-form" style="display:none;background:var(--surface);padding:1.5rem;border-radius:0.75rem;margin-bottom:1.5rem;border:1px solid #e2e8f0;">
+                    <h3>Create Governance Proposal</h3>
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="proposal-title" placeholder="Update Remote Work Policy">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="proposal-desc" placeholder="Proposal to update...">
+                    </div>
+                    <div class="form-group">
+                        <label>Proposal Type</label>
+                        <select id="proposal-type">
+                            <option value="Policy">Policy Change</option>
+                            <option value="Compensation">Compensation</option>
+                            <option value="Hiring">Hiring</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="createProposal()" id="proposal-btn">Submit Proposal</button>
+                </div>
+                <div id="proposals-list">
+                    <p style="text-align:center;color:var(--text-light)">Connect wallet to view proposals</p>
+                </div>
+            </div>
+            
+            <!-- Contracts -->
+            <div id="contracts" class="section">
+                <h2>Deployed Smart Contracts</h2>
+                <br>
+                <div id="contracts-list">
+                    <p style="text-align:center;color:var(--text-light)">Loading contracts...</p>
+                </div>
+                <br>
+                <h3>Network Information</h3>
+                <br>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Property</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody id="network-info">
+                        <tr><td>Chain ID</td><td id="info-chain-id">-</td></tr>
+                        <tr><td>Network Name</td><td id="info-network-name">-</td></tr>
+                        <tr><td>Block Number</td><td id="info-block">-</td></tr>
+                        <tr><td>Gas Price</td><td id="info-gas">-</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+        
+        <footer>
+            <p>D-HRS v2.0 - Built with Ethereum, Layer 2, ERC-4337, DID/VC | © 2024</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Configuration - Update these after deployment
+        const CONFIG = {
+            // Local Hardhat network contracts
+            contracts: {
+                HRToken: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+                EmployeeRegistry: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+                CredentialRegistry: "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+                PayrollExecutor: "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+                BenefitsNFT: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+                HRGovernance: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+                DIDRegistry: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
+            },
+            networks: {
+                11155111: { name: 'Sepolia', explorer: 'https://sepolia.etherscan.io' },
+                300: { name: 'zkSync Era Testnet', explorer: 'https://sepolia.explorer.zksync.io' },
+                421614: { name: 'Arbitrum Sepolia', explorer: 'https://sepolia.arbiscan.io' },
+                31337: { name: 'Localhost (Hardhat)', explorer: '#' }
+            }
+        };
+
+        // Global state
+        let walletClient = null;
+        let publicClient = null;
+        let account = null;
+        let chainId = null;
+
+        // ABI fragments for interactions
+        const ABIS = {
+            EmployeeRegistry: [
+                "function registerEmployee(address _employee, string memory _name, string memory _role, string memory _department, uint256 _salary) external",
+                "function getEmployee(address _employee) external view returns (tuple(address id, string name, string role, string department, uint256 salary, bool active, uint256 createdAt))",
+                "function getAllEmployees() external view returns (address[])",
+                "function employeeCount() external view returns (uint256)"
+            ],
+            CredentialRegistry: [
+                "function issueCredential(address _recipient, string memory _credentialType, string memory _data) external",
+                "function getCredential(uint256 _id) external view returns (tuple(uint256 id, address recipient, string credentialType, string data, address issuer, uint256 issuedAt, bool valid))",
+                "function credentialCount() external view returns (uint256)"
+            ],
+            PayrollExecutor: [
+                "function executePayroll(uint256 _period, address[] memory _employees, uint256[] memory _amounts) external",
+                "function getPayrollHistory(uint256 _index) external view returns (tuple(uint256 period, uint256 totalAmount, uint256 employeeCount, string status, uint256 createdAt))",
+                "function payrollCount() external view returns (uint256)"
+            ],
+            HRGovernance: [
+                "function createProposal(string memory _title, string memory _description, string memory _proposalType) external",
+                "function vote(uint256 _proposalId, bool _support) external",
+                "function getProposal(uint256 _id) external view returns (tuple(uint256 id, string title, string description, string proposalType, uint256 forVotes, uint256 againstVotes, bool executed, uint256 createdAt))",
+                "function proposalCount() external view returns (uint256)"
+            ],
+            HRToken: [
+                "function balanceOf(address account) external view returns (uint256)",
+                "function transfer(address to, uint256 amount) external returns (bool)",
+                "function totalSupply() external view returns (uint256)"
+            ]
+        };
+
+        // Initialize on load
+        window.addEventListener('load', async () => {
+            await checkWallet();
+            loadContractAddresses();
+        });
+
+        async function checkWallet() {
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        await connectWallet();
+                    }
+                } catch (e) {
+                    console.log('Wallet check failed:', e);
+                }
+            }
+        }
+
+        async function connectWallet() {
+            if (typeof window.ethereum === 'undefined') {
+                showAlert('MetaMask not installed! Please install MetaMask to use this dApp.', 'error');
+                return;
+            }
+
+            try {
+                updateConnectionStatus('connecting');
+                
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                account = accounts[0];
+
+                // Get chain ID
+                const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+                chainId = parseInt(chainIdHex, 16);
+
+                // Initialize clients
+                const { createWalletClient, createPublicClient, http } = window.viem;
+
+                walletClient = createWalletClient({
+                    account,
+                    chain: getViemChain(chainId),
+                    transport: http()
+                });
+
+                publicClient = createPublicClient({
+                    chain: getViemChain(chainId),
+                    transport: http()
+                });
+
+                // Update UI
+                updateConnectionStatus('connected');
+                updateNetworkBadge();
+                updateWalletButton();
+                enableButtons();
+                
+                // Load data
+                await loadDashboardData();
+                await loadContractData();
+                
+                showAlert(`Connected: ${shortenAddress(account)}`, 'success');
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                updateConnectionStatus('disconnected');
+                showAlert('Failed to connect wallet: ' + error.message, 'error');
+            }
+        }
+
+        function getViemChain(chainId) {
+            const chains = {
+                11155111: { id: 11155111, name: 'Sepolia', nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://eth-sepolia.g.alchemy.com/v2/demo'] } } },
+                300: { id: 300, name: 'zkSync Era Testnet', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://sepolia.era.zksync.dev'] } } },
+                421614: { id: 421614, name: 'Arbitrum Sepolia', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://sepolia-rollup.arbitrum.io/rpc'] } } },
+                31337: { id: 31337, name: 'Localhost', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['http://127.0.0.1:9555'] } } }
+            };
+            return chains[chainId] || chains[31337];
+        }
+
+        function updateConnectionStatus(status) {
+            const statusEl = document.getElementById('connection-status');
+            const dot = statusEl.querySelector('.status-dot');
+            const text = statusEl.querySelector('span:last-child');
+            
+            dot.className = 'status-dot ' + status;
+            text.textContent = status === 'connected' ? 'Connected' : status === 'connecting' ? 'Connecting...' : 'Disconnected';
+        }
+
+        function updateNetworkBadge() {
+            const badge = document.getElementById('network-badge');
+            const network = CONFIG.networks[chainId];
+            
+            if (network) {
+                badge.textContent = network.name;
+                badge.className = 'network-badge ' + (chainId === 11155111 ? 'sepolia' : 'localhost');
+            } else {
+                badge.textContent = `Chain ${chainId}`;
+                badge.className = 'network-badge unknown';
+            }
+
+            // Update network info
+            document.getElementById('info-chain-id').textContent = chainId;
+            document.getElementById('info-network-name').textContent = network ? network.name : 'Unknown';
+        }
+
+        function updateWalletButton() {
+            const btn = document.getElementById('wallet-btn');
+            const text = document.getElementById('wallet-text');
+            
+            btn.classList.add('connected');
+            text.textContent = shortenAddress(account);
+        }
+
+        function enableButtons() {
+            document.getElementById('add-employee-btn').disabled = false;
+            document.getElementById('issue-credential-btn').disabled = false;
+            document.getElementById('create-payroll-btn').disabled = false;
+            document.getElementById('create-proposal-btn').disabled = false;
+        }
+
+        async function loadDashboardData() {
+            if (!publicClient) return;
+
+            try {
+                // Get block number
+                const blockNumber = await publicClient.getBlockNumber();
+                document.getElementById('info-block').textContent = blockNumber.toString();
+
+                // Try to read from contracts (will show 0 if not deployed)
+                try {
+                    // Mock data for demo - replace with actual contract calls
+                    document.getElementById('total-employees').textContent = '0';
+                    document.getElementById('active-employees').textContent = '0';
+                    document.getElementById('total-credentials').textContent = '0';
+                    document.getElementById('pending-payroll').textContent = '0 HRG';
+                } catch (e) {
+                    console.log('Contract read error (expected if not deployed):', e.message);
+                }
+
+                // Update activity log
+                document.getElementById('activity-log').innerHTML = `
+                    <tr><td>Just now</td><td>Wallet Connected</td><td>${shortenAddress(account)}</td><td><span style="color:green">✓ Success</span></td></tr>
+                    <tr><td>Just now</td><td>Network Connected</td><td>Chain ${chainId}</td><td><span style="color:green">✓ Success</span></td></tr>
+                `;
+
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+            }
+        }
+
+        async function loadContractData() {
+            const contractsList = document.getElementById('contracts-list');
+            const network = CONFIG.networks[chainId] || { explorer: '#' };
+            const explorer = network.explorer;
+
+            let html = '';
+            for (const [name, address] of Object.entries(CONFIG.contracts)) {
+                const isZero = address === "0x0000000000000000000000000000000000000000";
+                html += `
+                    <div class="contract-item">
+                        <span class="contract-name">${name}</span>
+                        <span class="contract-address">
+                            ${isZero ? 'Not deployed' : `<a href="${explorer}/address/${address}" target="_blank">${shortenAddress(address)}</a>`}
+                        </span>
+                    </div>
+                `;
+            }
+            contractsList.innerHTML = html;
+        }
+
+        function loadContractAddresses() {
+            // Try to load from deployment file
+            fetch('./contracts/deployment-addresses.json')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.HRToken && data.HRToken !== "0x0000000000000000000000000000000000000000") {
+                        Object.assign(CONFIG.contracts, data);
+                        loadContractData();
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // Transaction functions
+        async function registerEmployee() {
+            if (!walletClient || !account) {
+                showAlert('Please connect your wallet first', 'error');
+                return;
+            }
+
+            const wallet = document.getElementById('emp-wallet').value;
+            const name = document.getElementById('emp-name').value;
+            const role = document.getElementById('emp-role').value;
+            const dept = document.getElementById('emp-dept').value;
+            const salary = document.getElementById('emp-salary').value;
+
+            if (!wallet || !name || !role || !salary) {
+                showAlert('Please fill in all required fields', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('register-btn');
+            btn.disabled = true;
+            btn.textContent = 'Transaction Pending...';
+
+            try {
+                // Simulate transaction for demo
+                showAlert('Transaction submitted! (Demo mode - contract not deployed)', 'info');
+                
+                // Add to local table for demo
+                const tbody = document.getElementById('employee-table');
+                tbody.innerHTML = `
+                    <tr><td>did:hrs:${wallet.slice(2,10)}</td><td>${name}</td><td>${role}</td><td>${dept}</td><td>$${parseInt(salary).toLocaleString()}</td><td><span style="color:green">Active</span></td></tr>
+                ` + tbody.innerHTML;
+
+                document.getElementById('add-employee-form').style.display = 'none';
+                
+            } catch (error) {
+                showAlert('Transaction failed: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Register on Blockchain';
+            }
+        }
+
+        async function issueCredential() {
+            const btn = document.getElementById('issue-btn');
+            btn.disabled = true;
+            btn.textContent = 'Transaction Pending...';
+
+            try {
+                showAlert('Credential issued! (Demo mode)', 'success');
+                document.getElementById('issue-credential-form').style.display = 'none';
+            } catch (error) {
+                showAlert('Transaction failed: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Issue Credential';
+            }
+        }
+
+        async function createPayroll() {
+            const btn = document.getElementById('payroll-btn');
+            btn.disabled = true;
+            btn.textContent = 'Executing...';
+
+            try {
+                showAlert('Payroll executed! (Demo mode)', 'success');
+                document.getElementById('create-payroll-form').style.display = 'none';
+            } catch (error) {
+                showAlert('Transaction failed: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Execute Payroll';
+            }
+        }
+
+        async function createProposal() {
+            const btn = document.getElementById('proposal-btn');
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+
+            try {
+                showAlert('Proposal submitted! (Demo mode)', 'success');
+                document.getElementById('create-proposal-form').style.display = 'none';
+            } catch (error) {
+                showAlert('Transaction failed: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Submit Proposal';
+            }
+        }
+
+        // UI Helpers
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function showAddEmployee() {
+            const form = document.getElementById('add-employee-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showIssueCredential() {
+            const form = document.getElementById('issue-credential-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showCreatePayroll() {
+            const form = document.getElementById('create-payroll-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showCreateProposal() {
+            const form = document.getElementById('create-proposal-form');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            container.appendChild(alert);
+            
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        function shortenAddress(addr) {
+            if (!addr) return '';
+            return addr.slice(0, 6) + '...' + addr.slice(-4);
+        }
+
+        // Listen for account changes
+        window.ethereum?.on('accountsChanged', (accounts) => {
+            if (accounts.length === 0) {
+                window.location.reload();
+            } else {
+                connectWallet();
+            }
+        });
+
+        window.ethereum?.on('chainChanged', () => {
+            window.location.reload();
+        });
+    </script>
+</body>
+</html>
