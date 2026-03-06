@@ -19,6 +19,12 @@ D-HRS (Decentralized Human Resources System) is a blockchain-based HR management
 - **Governance DAO** - Decentralized HR policy decision-making
 - **DID Identity** - Self-sovereign decentralized identifiers
 - **AI Oracle** - Smart salary benchmarking and performance scoring
+- **Decentralized Employee Evaluation** - Multi-evaluator performance reviews with dispute resolution
+- **Decentralized Recruitment** - Job postings, applications, and hiring workflow on-chain
+- **Decentralized Promotions/Demotions** - Transparent promotion reviews with peer and manager scoring
+- **Decentralized Salary Adjustments** - Transparent salary increase/decrease proposals
+- **Decentralized Job Transfers** - Request and approval workflow for transfers
+- **Decentralized Layoffs** - Structured layoff process with notice and severance
 
 ### Technology Stack
 
@@ -120,7 +126,8 @@ D-HRS/
 │   │   ├── HRGovernance.sol
 │   │   ├── DIDRegistry.sol
 │   │   ├── HRToken.sol
-│   │   └── HRAIOracle.sol         # NEW: AI-powered oracle
+│   │   ├── HRAIOracle.sol         # AI-powered oracle
+│   │   └── DecentralizedHRS.sol   # NEW: Decentralized HR functions
 │   ├── test/
 │   │   └── d-hrs.test.js
 │   ├── scripts/
@@ -322,6 +329,79 @@ POST /api/v1/governance/proposals
 }
 ```
 
+### Decentralized HR Functions (NEW)
+```bash
+# Employee Evaluation
+POST /api/v1/decentralized/evaluation
+{
+  "employee_did": "did:hrs:...",
+  "evaluator_did": "did:hrs:...",
+  "evaluation_type": 0,
+  "score": 85,
+  "strengths": "Technical skills",
+  "weaknesses": "Communication",
+  "recommendations": "Training courses"
+}
+
+# Job Postings
+POST /api/v1/decentralized/job-posting
+{
+  "title": "Senior Developer",
+  "description": "Job description",
+  "requirements": "5+ years experience",
+  "department": "Engineering",
+  "grade": 3,
+  "min_salary": 90000,
+  "max_salary": 120000
+}
+
+# Submit Application
+POST /api/v1/decentralized/application
+{
+  "posting_id": 0,
+  "applicant_did": "did:hrs:...",
+  "resume_hash": "0x..."
+}
+
+# Promotion Review
+POST /api/v1/decentralized/promotion-review
+{
+  "employee_did": "did:hrs:...",
+  "current_grade": 2,
+  "target_grade": 3,
+  "performance_score": 90,
+  "peer_review_score": 85,
+  "manager_review_score": 88
+}
+
+# Salary Adjustment
+POST /api/v1/decentralized/salary-adjustment
+{
+  "employee_did": "did:hrs:...",
+  "adjustment_percent": 10,
+  "reason": "Annual review",
+  "effective_date": 1699999999
+}
+
+# Job Transfer
+POST /api/v1/decentralized/transfer
+{
+  "employee_did": "did:hrs:...",
+  "from_department": "Engineering",
+  "to_department": "Product",
+  "reason": "Career growth"
+}
+
+# Layoff
+POST /api/v1/decentralized/layoff
+{
+  "employee_did": "did:hrs:...",
+  "reason": "Company restructuring",
+  "notice_period_days": 30,
+  "severance_amount": 5000
+}
+```
+
 ---
 
 ## Web UI Features
@@ -365,8 +445,34 @@ POST /api/v1/governance/proposals
     DIDRegistry
       ✓ Should create a DID
       ✓ Should update a DID
+    DecentralizedHRS - Employee Evaluation
+      ✓ Should create an employee evaluation
+      ✓ Should complete an evaluation with score
+      ✓ Should dispute an evaluation
+    DecentralizedHRS - Job Postings & Recruitment
+      ✓ Should create a job posting
+      ✓ Should submit a job application
+      ✓ Should update job posting status
+      ✓ Should update application status
+    DecentralizedHRS - Promotions
+      ✓ Should initiate promotion review
+      ✓ Should approve promotion
+    DecentralizedHRS - Salary Adjustments
+      ✓ Should propose salary adjustment
+      ✓ Should approve salary adjustment
+    DecentralizedHRS - Job Transfers
+      ✓ Should request job transfer
+      ✓ Should approve job transfer
+    DecentralizedHRS - Layoffs
+      ✓ Should propose layoff
+      ✓ Should approve layoff
+    DecentralizedHRS - Job Grades
+      ✓ Should get all job grades
+      ✓ Should update job grade
+    DecentralizedHRS - Interactive Communication
+      ✓ Should add evaluation feedback
 
-  12 passing
+  18 passing (DecentralizedHRS)
 ```
 
 ---
@@ -449,6 +555,7 @@ npx hardhat run scripts/deploy.js --network sepolia
 │  │  PayrollExecutor   │ BenefitsNFT    │   │
 │  │  HRGovernance      │ DIDRegistry    │   │
 │  │  HRAIOracle        │ HRToken        │   │
+│  │  DecentralizedHRS  │                │   │
 │  └──────────────────────────────────────┘   │
 └─────────────────────────────────────────────┘
 ```
@@ -468,6 +575,11 @@ For issues and questions:
 - Review API endpoints in `backend/src/index.js`
 - Examine the web UI in `index.html`
 - See `SECURITY_AUDIT.md` for security details
+
+---
+
+## Contact Us
+#####  Email: techshared4github@outlook.com
 
 ---
 

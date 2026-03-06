@@ -112,12 +112,13 @@
         </header>
         
         <nav>
-            <button class="active" onclick="showSection('dashboard')">Dashboard</button>
-            <button onclick="showSection('employees')">Employees</button>
-            <button onclick="showSection('credentials')">Credentials</button>
-            <button onclick="showSection('payroll')">Payroll</button>
-            <button onclick="showSection('governance')">Governance</button>
-            <button onclick="showSection('contracts')">Contracts</button>
+            <button class="active" onclick="showSection('dashboard', this)">Dashboard</button>
+            <button onclick="showSection('employees', this)">Employees</button>
+            <button onclick="showSection('credentials', this)">Credentials</button>
+            <button onclick="showSection('payroll', this)">Payroll</button>
+            <button onclick="showSection('governance', this)">Governance</button>
+            <button onclick="showSection('decentralized', this)">Decentralized HR</button>
+            <button onclick="showSection('contracts', this)">Contracts</button>
         </nav>
         
         <main>
@@ -346,6 +347,128 @@
                 </div>
             </div>
             
+            <!-- Decentralized HR -->
+            <div id="decentralized" class="section">
+                <h2>Decentralized HR Functions</h2>
+                <br>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Job Postings</h3>
+                        <p class="stat-value" id="decentralized-postings">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pending Reviews</h3>
+                        <p class="stat-value" id="decentralized-reviews">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Transfers</h3>
+                        <p class="stat-value" id="decentralized-transfers">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Job Grades</h3>
+                        <p class="stat-value" id="decentralized-grades">8</p>
+                    </div>
+                </div>
+                
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem;margin-top:1.5rem;">
+                    <!-- Job Posting Card -->
+                    <div class="proposal-card">
+                        <h3>Create Job Posting</h3>
+                        <p style="font-size:0.875rem;color:var(--text-light)">Publish a new job opening</p>
+                        <div class="form-group" style="margin-top:1rem;">
+                            <input type="text" id="job-title" placeholder="Job Title" style="margin-bottom:0.5rem;">
+                            <input type="text" id="job-dept" placeholder="Department" style="margin-bottom:0.5rem;">
+                            <input type="number" id="job-salary-min" placeholder="Min Salary" style="margin-bottom:0.5rem;">
+                            <input type="number" id="job-salary-max" placeholder="Max Salary">
+                        </div>
+                        <button class="btn" onclick="createJobPosting()" id="job-posting-btn" style="width:100%">Create Posting</button>
+                    </div>
+                    
+                    <!-- Evaluation Card -->
+                    <div class="proposal-card">
+                        <h3>Employee Evaluation</h3>
+                        <p style="font-size:0.875rem;color:var(--text-light)">Submit performance evaluation</p>
+                        <div class="form-group" style="margin-top:1rem;">
+                            <input type="text" id="eval-employee-did" placeholder="Employee DID" style="margin-bottom:0.5rem;">
+                            <input type="number" id="eval-score" placeholder="Score (0-100)" style="margin-bottom:0.5rem;">
+                            <input type="text" id="eval-strengths" placeholder="Strengths" style="margin-bottom:0.5rem;">
+                            <input type="text" id="eval-weaknesses" placeholder="Weaknesses">
+                        </div>
+                        <button class="btn" onclick="submitEvaluation()" id="eval-btn" style="width:100%">Submit Evaluation</button>
+                    </div>
+                    
+                    <!-- Promotion Card -->
+                    <div class="proposal-card">
+                        <h3>Promotion Review</h3>
+                        <p style="font-size:0.875rem;color:var(--text-light)">Initiate promotion review</p>
+                        <div class="form-group" style="margin-top:1rem;">
+                            <input type="text" id="promo-employee-did" placeholder="Employee DID" style="margin-bottom:0.5rem;">
+                            <select id="promo-current-grade" style="margin-bottom:0.5rem;">
+                                <option value="">Current Grade</option>
+                                <option value="0">Entry</option>
+                                <option value="1">Junior</option>
+                                <option value="2">Mid</option>
+                                <option value="3">Senior</option>
+                                <option value="4">Lead</option>
+                                <option value="5">Manager</option>
+                                <option value="6">Director</option>
+                                <option value="7">VP</option>
+                            </select>
+                            <select id="promo-target-grade" style="margin-bottom:0.5rem;">
+                                <option value="">Target Grade</option>
+                                <option value="1">Junior</option>
+                                <option value="2">Mid</option>
+                                <option value="3">Senior</option>
+                                <option value="4">Lead</option>
+                                <option value="5">Manager</option>
+                                <option value="6">Director</option>
+                                <option value="7">VP</option>
+                            </select>
+                            <input type="number" id="promo-score" placeholder="Performance Score">
+                        </div>
+                        <button class="btn" onclick="initiatePromotion()" id="promo-btn" style="width:100%">Initiate Review</button>
+                    </div>
+                    
+                    <!-- Salary Adjustment Card -->
+                    <div class="proposal-card">
+                        <h3>Salary Adjustment</h3>
+                        <p style="font-size:0.875rem;color:var(--text-light)">Propose salary change</p>
+                        <div class="form-group" style="margin-top:1rem;">
+                            <input type="text" id="salary-employee-did" placeholder="Employee DID" style="margin-bottom:0.5rem;">
+                            <input type="number" id="salary-adjustment" placeholder="Adjustment % (-50 to 100)" style="margin-bottom:0.5rem;">
+                            <input type="text" id="salary-reason" placeholder="Reason">
+                        </div>
+                        <button class="btn" onclick="proposeSalaryAdjustment()" id="salary-btn" style="width:100%">Propose Adjustment</button>
+                    </div>
+                    
+                    <!-- Job Transfer Card -->
+                    <div class="proposal-card">
+                        <h3>Job Transfer</h3>
+                        <p style="font-size:0.875rem;color:var(--text-light)">Request department transfer</p>
+                        <div class="form-group" style="margin-top:1rem;">
+                            <input type="text" id="transfer-employee-did" placeholder="Employee DID" style="margin-bottom:0.5rem;">
+                            <input type="text" id="transfer-from" placeholder="From Department" style="margin-bottom:0.5rem;">
+                            <input type="text" id="transfer-to" placeholder="To Department" style="margin-bottom:0.5rem;">
+                            <input type="text" id="transfer-reason" placeholder="Reason">
+                        </div>
+                        <button class="btn" onclick="requestTransfer()" id="transfer-btn" style="width:100%">Request Transfer</button>
+                    </div>
+                    
+                    <!-- Layoff Card -->
+                    <div class="proposal-card">
+                        <h3>Layoff Proposal</h3>
+                        <p style="font-size:0.875rem;color:var(--text-light)">Propose employee layoff</p>
+                        <div class="form-group" style="margin-top:1rem;">
+                            <input type="text" id="layoff-employee-did" placeholder="Employee DID" style="margin-bottom:0.5rem;">
+                            <input type="text" id="layoff-reason" placeholder="Reason" style="margin-bottom:0.5rem;">
+                            <input type="number" id="layoff-severance" placeholder="Severance Amount" style="margin-bottom:0.5rem;">
+                            <input type="number" id="layoff-notice" placeholder="Notice Days">
+                        </div>
+                        <button class="btn" onclick="proposeLayoff()" id="layoff-btn" style="width:100%">Propose Layoff</button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Contracts -->
             <div id="contracts" class="section">
                 <h2>Deployed Smart Contracts</h2>
@@ -383,13 +506,14 @@
         const CONFIG = {
             // Local Hardhat network contracts
             contracts: {
-                HRToken: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-                EmployeeRegistry: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
-                CredentialRegistry: "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
-                PayrollExecutor: "0x0165878A594ca255338adfa4d48449f69242Eb8F",
-                BenefitsNFT: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
-                HRGovernance: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
-                DIDRegistry: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
+                HRToken: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
+                EmployeeRegistry: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+                CredentialRegistry: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
+                PayrollExecutor: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+                BenefitsNFT: "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
+                HRGovernance: "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
+                DIDRegistry: "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+                DecentralizedHRS: "0x9A676e781A523b5d0C0e43731313A708CB607508"
             },
             networks: {
                 11155111: { name: 'Sepolia', explorer: 'https://sepolia.etherscan.io' },
@@ -709,11 +833,11 @@
         }
 
         // UI Helpers
-        function showSection(id) {
+        function showSection(id, btn) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            event.target.classList.add('active');
+            if (btn) btn.classList.add('active');
         }
 
         function showAddEmployee() {

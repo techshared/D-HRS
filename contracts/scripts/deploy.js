@@ -52,6 +52,12 @@ async function main() {
   const didRegistryAddress = await getAddress(didRegistry);
   console.log("DIDRegistry deployed to:", didRegistryAddress);
 
+  // Deploy DecentralizedHRS
+  const DecentralizedHRS = await hre.ethers.getContractFactory("DecentralizedHRS");
+  const decentralizedHRS = await DecentralizedHRS.deploy();
+  const decentralizedHRSAddress = await getAddress(decentralizedHRS);
+  console.log("DecentralizedHRS deployed to:", decentralizedHRSAddress);
+
   console.log("\n=== Deployment Summary ===");
   console.log("HRToken:", hrTokenAddress);
   console.log("EmployeeRegistry:", employeeRegistryAddress);
@@ -60,6 +66,7 @@ async function main() {
   console.log("BenefitsNFT:", benefitsNFTAddress);
   console.log("HRGovernance:", hrGovernanceAddress);
   console.log("DIDRegistry:", didRegistryAddress);
+  console.log("DecentralizedHRS:", decentralizedHRSAddress);
 
   const fs = require("fs");
   const networkName = hre.network.name;
@@ -73,6 +80,7 @@ async function main() {
     BenefitsNFT: benefitsNFTAddress,
     HRGovernance: hrGovernanceAddress,
     DIDRegistry: didRegistryAddress,
+    DecentralizedHRS: decentralizedHRSAddress,
     chainId: chainId,
     network: networkName,
     deployedAt: new Date().toISOString()
