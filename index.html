@@ -506,14 +506,14 @@
         const CONFIG = {
             // Local Hardhat network contracts
             contracts: {
-                HRToken: "0xa513E6E4b8f2a923D98304ec87F64353C4D5C853",
-                EmployeeRegistry: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
-                CredentialRegistry: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
-                PayrollExecutor: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
-                BenefitsNFT: "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
-                HRGovernance: "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
-                DIDRegistry: "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
-                DecentralizedHRS: "0x9A676e781A523b5d0C0e43731313A708CB607508"
+                HRToken: "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
+                EmployeeRegistry: "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+                CredentialRegistry: "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
+                PayrollExecutor: "0x68B1D87F95878fE05B998F19b66F4baba5De1aed",
+                BenefitsNFT: "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
+                HRGovernance: "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d",
+                DIDRegistry: "0x59b670e9fA9D0A427751Af201D676719a970857b",
+                DecentralizedHRS: "0x4ed7c70F96B99c776995fB64377f0d4aB3B0e1C1"
             },
             networks: {
                 11155111: { name: 'Sepolia', explorer: 'https://sepolia.etherscan.io' },
@@ -633,7 +633,7 @@
                 11155111: { id: 11155111, name: 'Sepolia', nativeCurrency: { name: 'Sepolia ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://eth-sepolia.g.alchemy.com/v2/demo'] } } },
                 300: { id: 300, name: 'zkSync Era Testnet', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://sepolia.era.zksync.dev'] } } },
                 421614: { id: 421614, name: 'Arbitrum Sepolia', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://sepolia-rollup.arbitrum.io/rpc'] } } },
-                31337: { id: 31337, name: 'Localhost', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['http://127.0.0.1:9555'] } } }
+                31337: { id: 31337, name: 'Localhost', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['http://127.0.0.1:8545'] } } }
             };
             return chains[chainId] || chains[31337];
         }
