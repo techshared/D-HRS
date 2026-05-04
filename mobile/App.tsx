@@ -1,20 +1,20 @@
+import "fast-text-encoding";
 import "react-native-get-random-values";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { View, Text, Button, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
-import { WagmiProvider, useWalletClient, useAccount, useConnect, useDisconnect } from "wagmi";
+import { WagmiConfig, useWalletClient, useAccount, useConnect, useDisconnect, createConfig, configureChains } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { http, createConfig } from "wagmi";
+import { publicProvider } from "wagmi/providers/public";
+import { InjectedConnector } from "wagmi/connectors/injected";
 import { mainnet, sepolia } from "wagmi/chains";
-import { injected } from "wagmi/connectors";
+
+const { chains, publicClient } = configureChains([mainnet, sepolia], [publicProvider()]);
 
 const config = createConfig({
-  chains: [mainnet, sepolia],
-  transports: {
-    [mainnet.id]: http(),
-    [sepolia.id]: http(),
-  },
-  connectors: [injected()],
+  autoConnect: true,
+  connectors: [new InjectedConnector({ chains })],
+  publicClient,
 });
 
 const queryClient = new QueryClient();
@@ -189,11 +189,11 @@ function GovernanceContent() {
 
 export default function App() {
   return (
-    <WagmiProvider config={config}>
+    <WagmiConfig config={config}>
       <QueryClientProvider client={queryClient}>
         <DashboardScreen />
       </QueryClientProvider>
-    </WagmiProvider>
+    </WagmiConfig>
   );
 }
 
