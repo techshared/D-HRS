@@ -1,6 +1,6 @@
 # Technical Diagrams
 *.md
-!README.md
+!README_zh.md
 
 # Dependencies
 node_modules/
