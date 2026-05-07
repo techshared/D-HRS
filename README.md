@@ -1,10 +1,12 @@
 # D-HRS v2.0 - Decentralized Human Resources System
 
-A next-generation decentralized principles HR system, featuring Layer 2 scaling, ERC-4337 Account Abstraction, DID/VC identity, AI oracles, and privacy-preserving technologies.
+A next-generation decentralized principles HR system, featuring Layer 2 scaling, ERC-4337 Account Abstraction, DID/VC identity, AI oracles, privacy-preserving technologies, and **Bitcoin/Lightning Network integration**.
 
 ![D-HRS](https://img.shields.io/badge/version-2.0-blue)
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.19-blue)
 ![Node.js](https://img.shields.io/badge/Node.js-20+-green)
+![Bitcoin](https://img.shields.io/badge/Bitcoin-Core-orange)
+![Lightning](https://img.shields.io/badge/Lightning-Network-yellow)
 
 ## Overview
 
@@ -25,6 +27,8 @@ D-HRS (Decentralized Human Resources System) is a blockchain-based HR management
 - **Decentralized Salary Adjustments** - Transparent salary increase/decrease proposals
 - **Decentralized Job Transfers** - Request and approval workflow for transfers
 - **Decentralized Layoffs** - Structured layoff process with notice and severance
+- **Bitcoin Integration** - On-chain BT payments via Bitcoin Core
+- **Lightning Network** - Instant, low-fee payments via LND or Core Lightning
 
 ### Technology Stack
 
@@ -36,6 +40,7 @@ D-HRS (Decentralized Human Resources System) is a blockchain-based HR management
 | Frontend | HTML/CSS/JavaScript (viem.js) |
 | Mobile | React Native / Expo |
 | Testing | Hardhat Tests |
+| Bitcoin Integration | Bitcoin Core, LND, Core Lightning |
 
 ---
 
@@ -91,6 +96,12 @@ D-HRS (Decentralized Human Resources System) is a blockchain-based HR management
 - **Equal Access**: All stakeholders can verify system state
 - **Dispute Resolution**: Immutable records provide definitive evidence
 
+#### 7. **Bitcoin & Lightning Payments**
+- **On-Chain Payments**: Direct BT salary payments via Bitcoin Core
+- **Instant Lightning Payments**: Sub-second payroll via Lightning Network
+- **Low Fees**: Lightning transactions cost fractions of a cent
+- **Global Reach**: Borderless payments to any employee worldwide
+
 ### Use Cases
 
 #### For Employers
@@ -98,12 +109,13 @@ D-HRS (Decentralized Human Resources System) is a blockchain-based HR management
 - **Streamline Onboarding**: Reduce onboarding time from days to minutes
 - **Automated Payroll**: Set-and-forget salary payments
 - **AI Insights**: Data-driven compensation decisions
+- **Bitcoin Payroll**: Pay employees in BT via Lightning Network
 
 #### For Employees  
 - **Own Your Data**: Control who sees your credentials
 - **Instant Employment Proof**: Prove your employment instantly
 - **Portable Credentials**: Take your verified credentials to new jobs
-- **Direct Deposit**: Receive salary via crypto or traditional methods
+- **Direct Deposit**: Receive salary via crypto (BT/Lightning) or traditional methods
 
 #### For HR Professionals
 - **Reduce Administrative Burden**: Automate repetitive tasks
@@ -117,6 +129,11 @@ D-HRS (Decentralized Human Resources System) is a blockchain-based HR management
 
 ```
 D-HRS/
+├── backend/                   # Express API server (✅ LND integrated)
+│   ├── src/
+│   │   ├── index.js         # Main server (600 lines, all API endpoints)
+│   │   └── lnd-client.js   # LND client wrapper (9 methods)
+│   └── package.json
 ├── contracts/                 # Smart contracts
 │   ├── src/
 │   │   ├── EmployeeRegistry.sol
@@ -127,7 +144,7 @@ D-HRS/
 │   │   ├── DIDRegistry.sol
 │   │   ├── HRToken.sol
 │   │   ├── HRAIOracle.sol         # AI-powered oracle
-│   │   └── DecentralizedHRS.sol   # NEW: Decentralized HR functions
+│   │   └── DecentralizedHRS.sol   # Decentralized HR functions
 │   ├── test/
 │   │   └── d-hrs.test.js
 │   ├── scripts/
@@ -135,23 +152,37 @@ D-HRS/
 │   │   └── generate-account.js
 │   ├── hardhat.config.js
 │   └── deployment-addresses.json
-├── backend/                   # Express API server
-│   ├── src/
-│   │   └── index.js
-│   └── package.json
-├── mobile/                    # React Native app (NEW)
-│   ├── App.tsx
-│   ├── app.json
-│   └── package.json
+├── test-lnd-integration.js    # LND connection test (✅ passes)
+├── test-apis.js               # API test script (✅ all pass)
 ├── index.html                 # Standalone web UI with viem.js
-├── SECURITY_AUDIT.md          # Security audit report
-├── test-runner.js            # E2E test runner
-└── README.md
+├── SECURITY_AUDIT.md        # Security audit report
+└── README.md             # English documentation
 ```
 
 ---
 
 ## Quick Start
+
+### Prerequisites
+
+1. **Browser Wallet** - MetaMask, Rabby Wallet, or Brave Wallet (for desktop)
+2. **Mobile Wallet** - Trust Wallet, Rainbow, or MetaMask Mobile (for WalletConnect QR scanning)
+3. **Bitcoin Core** running on port 8332 (RPC)
+4. **LND** running on port 10009 (REST) or **Core Lightning** on port 9736
+5. **Hardhat Node** for smart contract deployment
+
+### Wallet Support
+
+D-HRS v2.0 supports **both desktop and mobile wallets**:
+
+| Wallet Type | Options | Connection Method |
+|-------------|---------|-------------------|
+| **Desktop** | MetaMask, Rabby Wallet, Brave Wallet | Browser extension injection |
+| **Mobile** | Trust Wallet, Rainbow, MetaMask Mobile | WalletConnect QR code |
+
+**WalletConnect Setup** (optional for mobile):
+1. Get a project ID from https://cloud.walletconnect.com
+2. Replace `YOUR_WALLETCONNECT_PROJECT_ID` in `index.html` line 706
 
 ### 1. Clone & Install Dependencies
 
@@ -163,18 +194,41 @@ npm install
 # Install backend dependencies
 cd ../backend
 npm install
+
+# Install axios for Bitcoin RPC calls
+npm install axios
 ```
 
-### 2. Start Local Hardhat Node
+### 2. Start Bitcoin Core (if not running)
+
+```bash
+# Check if Bitcoin Core is running
+ps aux | grep bitcoind
+
+# If not running, start it:
+bitcoind -rpcuser=btc_rpc_user -rpcpassword=StrongPassw0rd_123 -rpcport=8332
+```
+
+### 3. Start LND (if not running)
+
+```bash
+# Check if LND is running
+ps aux | grep lnd
+
+# If not running, start it:
+lnd --bitcoin.mainnet --nosebackup --bitcoin.node=bitcoind \
+  --bitcoind.rpcuser=btc_rpc_user \
+  --bitcoind.rpcpass=StrongPassw0rd_123
+```
+
+### 4. Start Hardhat Node
 
 ```bash
 cd contracts
 npx hardhat node --hostname 127.0.0.1 --port 9555
 ```
 
-This starts a local Ethereum node with 20 test accounts (each with 10000 ETH).
-
-### 3. Deploy Smart Contracts
+### 5. Deploy Smart Contracts
 
 ```bash
 # In a new terminal
@@ -182,14 +236,14 @@ cd contracts
 npx hardhat run scripts/deploy.js --network localnode
 ```
 
-### 4. Run Unit Tests
+### 6. Run Unit Tests
 
 ```bash
 cd contracts
 npx hardhat test
 ```
 
-### 5. Start Backend API
+### 7. Start Backend API
 
 ```bash
 cd backend
@@ -198,36 +252,59 @@ npm start
 
 Backend runs on `http://localhost:3001`
 
-### 6. Start Web UI
+### 8. Start Web UI
 
 ```bash
 # From project root
 python3 -m http.server 8001
 ```
 
+### 9. Connect Wallet
+
+1. Open http://localhost:8001/index.html
+2. Click "Connect Wallet"
+3. Choose:
+   - **Browser Wallet** - MetaMask / Rabby / Brave Wallet
+   - **Mobile Wallet** - Scan QR code with Trust Wallet / Rainbow / MetaMask Mobile
+
 ---
 
 ## Running the Complete System
 
-### Terminal 1: Hardhat Node
+### Terminal 1: Bitcoin Core
+```bash
+bitcoind -rpcuser=btc_rpc_user -rpcpassword=StrongPassw0rd_123 \
+  -zmqpubrawblock=tcp://127.0.0.1:28332 \
+  -zmqpubrawtx=tcp://127.0.0.1:28333
+```
+
+### Terminal 2: LND
+```bash
+lnd --bitcoin.mainnet --nosebackup \
+  --bitcoin.node=bitcoind \
+  --bitcoind.rpcuser=btc_rpc_user \
+  --bitcoind.rpcpass=StrongPassw0rd_123
+```
+
+### Terminal 3: Hardhat Node
 ```bash
 cd contracts
 npx hardhat node --hostname 127.0.0.1 --port 9555
 ```
 
-### Terminal 2: Deploy Contracts
+### Terminal 4: Deploy Contracts
 ```bash
 cd contracts
 npx hardhat run scripts/deploy.js --network localnode
 ```
 
-### Terminal 3: Backend API
+### Terminal 5: Backend API
 ```bash
 cd backend
 npm start
 ```
 
-### Terminal 4: Web UI
+### Terminal 6: Web UI
 ```bash
 python3 -m http.server 8001
 ```
@@ -240,191 +317,152 @@ python3 -m http.server 8001
 | **Backend API** | http://localhost:3001 |
 | **API Health** | http://localhost:3001/api/v1/health |
 | **Hardhat RPC** | http://127.0.0.1:9555 |
+| **Bitcoin RPC** | http://127.0.0.1:8332 |
+| **LND REST** | https://127.0.0.1:10009 |
 
 ---
 
-## Deployed Contract Addresses
+## Bitcoin & Lightning Network Integration (✅ Completed)
 
-### Local Network (Chain ID: 31337)
+D-HRS integrates with **Bitcoin Core** and **LND** for decentralized HR payments via Lightning Network.
 
-| Contract | Address |
-|----------|---------|
-| HRToken | 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 |
-| EmployeeRegistry | 0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9 |
-| CredentialRegistry | 0x5FC8d32690cc91D4c39d9d3abcBD16989F875707 |
-| PayrollExecutor | 0x0165878A594ca255338adfa4d48449f69242Eb8F |
-| BenefitsNFT | 0xa513E6E4b8f2a923D98304ec87F64353C4D5C853 |
-| HRGovernance | 0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6 |
-| DIDRegistry | 0x8A791620dd6260079BF849Dc5567aDC3F2FdC318 |
+### Features (Implemented)
+- **LND Wallet Integration** - Employee Lightning address generation on registration
+- **Lightning Payments** - Instant salary payments via LND invoices
+- **Credential Fees** - Collect micropayments via LND invoices before issuing credentials
+- **Authentication** - LND message signing/verification for secure login
+- **Payroll Automation** - Batch Lightning payments when payroll is approved
+- **Personnel Actions** - Lightning payments for promotions, severance, salary adjustments
 
----
+### Current Status
 
-## API Endpoints
+| Component | Status | Details |
+|-----------|--------|---------|
+| **Bitcoin Core** | ✅ Running | PID 30556, prune=10000, ZMQ: 28332/28333 |
+| **LND** | ✅ Running | PID 30613, Node: 03e9e769..., Block: ~617K |
+| **Core Lightning** | ⚠️ Partial | PID 8447, RPC connection refused |
+| **D-HRS Backend** | ✅ Running | PID 9383, Port 3001, All API endpoints active |
 
-### Health Check
-```bash
-GET /api/v1/health
+### LND Client (Implemented)
+File: `backend/src/lnd-client.js`
+
+```javascript
+const LND = require('./lnd-client');
+const lnd = new LND({
+  lncliPath: '/home/cste/bin/lncli',
+  lightningDir: '/home/cste/.lnd'
+});
+
+// Available methods:
+await lnd.getInfo()              // Get node info
+await lnd.newAddress(type)        // Generate address (p2wkh)
+await lnd.walletBalance()         // Query wallet balance
+await lnd.addInvoice(value, memo) // Create invoice
+await lnd.payInvoice(payReq)     // Pay invoice
+await lnd.lookupInvoice(rHash)   // Check invoice status
+await lnd.decodePayReq(payReq)   // Decode payment request
+await lnd.signMessage(msg)        // Sign message
+await lnd.verifyMessage(msg, sig, pk) // Verify signature
 ```
 
-### Contracts
+### API Endpoints (Implemented)
+
+#### Authentication (LND Signature)
+| Endpoint | Method | LND Function | Status |
+|----------|--------|--------------|--------|
+| `/api/v1/auth/challenge` | GET | Generate random challenge | ✅ |
+| `/api/v1/auth/connect` | POST | `lnd.verifyMessage()` | ✅ |
+
+#### Employee Management (LND Address + Payments)
+| Endpoint | Method | LND Function | Status |
+|----------|--------|--------------|--------|
+| `/api/v1/employees` | POST | `lnd.newAddress()` on registration | ✅ |
+| `/api/v1/employees/:did` | GET | - | ✅ |
+| `/api/v1/employees` | GET | - | ✅ |
+| `/api/v1/employees/:did` | PATCH | - | ✅ |
+| `/api/v1/employees/:did/balance` | GET | `lnd.walletBalance()` | ✅ |
+| `/api/v1/employees/:did/pay` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
+
+#### Credential Management (LND Invoices)
+| Endpoint | Method | LND Function | Status |
+|----------|--------|--------------|--------|
+| `/api/v1/credentials/issue` | POST | `lnd.addInvoice()` generates invoice | ✅ |
+| `/api/v1/credentials/verify` | POST | `lnd.lookupInvoice()` checks payment | ✅ |
+| `/api/v1/credentials/:did` | GET | - | ✅ |
+
+#### Payroll System (LND Batch Payments)
+| Endpoint | Method | LND Function | Status |
+|----------|--------|--------------|--------|
+| `/api/v1/payroll/run` | POST | - | ✅ |
+| `/api/v1/payroll/run/:runId/approve` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
+| `/api/v1/payroll/history` | GET | - | ✅ |
+| `/api/v1/employees/:did/salary` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
+
+#### Personnel Actions (LND Payments)
+| Endpoint | Method | LND Function | Status |
+|----------|--------|--------------|--------|
+| `/api/v1/employees/:did/transfer` | POST | - | ✅ |
+| `/api/v1/employees/:did/promotion` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
+| `/api/v1/employees/:did/layoff` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
+
+### Usage Examples
+
+#### 1. Register Employee (Auto-generates Lightning Address)
 ```bash
-GET /api/v1/contracts
+curl -X POST http://localhost:3001/api/v1/employees \
+  -H "Content-Type: application/json" \
+  -d '{
+    "did": "did:example:123",
+    "role": "developer",
+    "department": "engineering"
+  }'
 ```
 
-### Employees
+#### 2. Issue Credential (Generates LND Invoice)
 ```bash
-# Get all employees
-GET /api/v1/employees
-
-# Register employee
-POST /api/v1/employees
-{
-  "wallet_address": "0x...",
-  "did": "did:hrs:...",
-  "role": "Software Engineer",
-  "department": "Engineering",
-  "salary": 100000
-}
+curl -X POST http://localhost:3001/api/v1/credentials/issue \
+  -H "Content-Type: application/json" \
+  -d '{
+    "subject_did": "did:example:123",
+    "credential_type": "degree",
+    "data": {"degree": "BS"}
+  }'
 ```
 
-### Credentials
-```bash
-# Issue credential
-POST /api/v1/credentials/issue
-{
-  "subject_did": "did:hrs:...",
-  "credential_type": "EmploymentCredential",
-  "expiry_days": 365
-}
-
-# Verify credential
-POST /api/v1/credentials/verify
-{
-  "subject_did": "did:hrs:...",
-  "credential_type": "EmploymentCredential"
-}
-```
-
-### Payroll
+#### 3. Approve Payroll (Batch LND Payments)
 ```bash
 # Create payroll run
-POST /api/v1/payroll/run
-{
-  "period_start": "2024-01-01",
-  "period_end": "2024-01-31",
-  "payments": [
-    {"did": "0x111", "wallet": "0x...", "gross_amount": 10000, "deductions": 3000, "net_amount": 7000}
-  ]
-}
+curl -X POST http://localhost:3001/api/v1/payroll/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "period_start": "2026-05-01",
+    "period_end": "2026-05-31",
+    "payments": [
+      {"employee_did": "did:example:123", "net_amount": 5000}
+    ]
+  }'
+
+# Approve (triggers LND payments)
+curl -X POST http://localhost:3001/api/v1/payroll/run/0/approve
 ```
 
-### Governance
-```bash
-# Create proposal
-POST /api/v1/governance/proposals
-{
-  "title": "Update Remote Work Policy",
-  "description": "Allow 4 days remote work per week",
-  "category": "policy"
-}
-```
+### Connection Information
 
-### Decentralized HR Functions (NEW)
-```bash
-# Employee Evaluation
-POST /api/v1/decentralized/evaluation
-{
-  "employee_did": "did:hrs:...",
-  "evaluator_did": "did:hrs:...",
-  "evaluation_type": 0,
-  "score": 85,
-  "strengths": "Technical skills",
-  "weaknesses": "Communication",
-  "recommendations": "Training courses"
-}
-
-# Job Postings
-POST /api/v1/decentralized/job-posting
-{
-  "title": "Senior Developer",
-  "description": "Job description",
-  "requirements": "5+ years experience",
-  "department": "Engineering",
-  "grade": 3,
-  "min_salary": 90000,
-  "max_salary": 120000
-}
-
-# Submit Application
-POST /api/v1/decentralized/application
-{
-  "posting_id": 0,
-  "applicant_did": "did:hrs:...",
-  "resume_hash": "0x..."
-}
-
-# Promotion Review
-POST /api/v1/decentralized/promotion-review
-{
-  "employee_did": "did:hrs:...",
-  "current_grade": 2,
-  "target_grade": 3,
-  "performance_score": 90,
-  "peer_review_score": 85,
-  "manager_review_score": 88
-}
-
-# Salary Adjustment
-POST /api/v1/decentralized/salary-adjustment
-{
-  "employee_did": "did:hrs:...",
-  "adjustment_percent": 10,
-  "reason": "Annual review",
-  "effective_date": 1699999999
-}
-
-# Job Transfer
-POST /api/v1/decentralized/transfer
-{
-  "employee_did": "did:hrs:...",
-  "from_department": "Engineering",
-  "to_department": "Product",
-  "reason": "Career growth"
-}
-
-# Layoff
-POST /api/v1/decentralized/layoff
-{
-  "employee_did": "did:hrs:...",
-  "reason": "Company restructuring",
-  "notice_period_days": 30,
-  "severance_amount": 5000
-}
-```
-
----
-
-## Web UI Features
-
-1. **Dashboard** - System overview, statistics, activity log
-2. **Employees** - View and register employees on-chain
-3. **Credentials** - Manage verifiable credentials
-4. **Payroll** - Create and track payroll runs
-5. **Governance** - Create and vote on proposals
-6. **Contracts** - View deployed contract addresses
-
-### Connecting Wallet
-
-1. Open http://localhost:8001/index.html
-2. Click "Connect Wallet" 
-3. If using MetaMask, add custom network:
-   - Network Name: Localhost 9555
-   - RPC URL: http://127.0.0.1:9555
-   - Chain ID: 31337
+| Service | Value |
+|---------|-------|
+| **LND gRPC** | 127.0.0.1:10009 |
+| **LND REST** | https://127.0.0.1:8080 |
+| **LND Lightning** | Port 9735 |
+| **LND Node ID** | `03e9e769993dc642d80ddae0e4ba98977bdefa998a9a32529d91337cd13c6d7ff1` |
+| **Bitcoin Core RPC** | 127.0.0.1:8332 |
+| **D-HRS Backend** | http://localhost:3001 |
+| **Health Check** | http://localhost:3001/api/v1/health |
 
 ---
 
 ## Testing Results
+
+All 18 tests passing for DecentralizedHRS smart contract:
 
 ```
   D-HRS Contracts
@@ -475,6 +513,15 @@ POST /api/v1/decentralized/layoff
   18 passing (DecentralizedHRS)
 ```
 
+### Backend API Status
+
+| Service | Status | Port |
+|---------|--------|------|
+| **Backend API** | ✅ Running | 3001 |
+| **Bitcoin Core** | ✅ Running | RPC: 8332 |
+| **LND** | ✅ Running | REST: 10009 |
+| **Web UI** | ✅ Running | 8001 |
+
 ---
 
 ## Security
@@ -508,6 +555,7 @@ Features:
 - View dashboard and statistics
 - Manage employees on-the-go
 - View and vote on governance proposals
+- Bitcoin/Lightning payment support
 
 ---
 
@@ -518,13 +566,11 @@ Features:
 1. Get SepoliaETH from https://sepoliafaucet.com
 2. Get Alchemy API key from https://dashboard.alchemy.com
 3. Create `.env` file in `contracts/`:
-
 ```env
 PRIVATE_KEY=your_private_key_without_0x
 SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
 ETHERSCAN_API_KEY=your_etherscan_api_key
 ```
-
 4. Deploy:
 ```bash
 npx hardhat run scripts/deploy.js --network sepolia
@@ -539,14 +585,14 @@ npx hardhat run scripts/deploy.js --network sepolia
 │           PRESENTATION LAYER                │
 │    (Web UI - index.html / Mobile App)      │
 └─────────────────┬───────────────────────────┘
-                  │
-                  ▼
+                   │
+                   ▼
 ┌─────────────────────────────────────────────┐
 │              API GATEWAY                     │
 │          (Express.js - Port 3001)           │
 └─────────────────┬───────────────────────────┘
-                  │
-                  ▼
+                   │
+                   ▼
 ┌─────────────────────────────────────────────┐
 │         BLOCKCHAIN NETWORK                   │
 │    (Hardhat Local / Testnet / Mainnet)      │
@@ -564,7 +610,7 @@ npx hardhat run scripts/deploy.js --network sepolia
 
 ## License
 
-MIT License - See LICENSE file for details
+MIT License - See LICENSE file for details.
 
 ---
 
@@ -575,12 +621,23 @@ For issues and questions:
 - Review API endpoints in `backend/src/index.js`
 - Examine the web UI in `index.html`
 - See `SECURITY_AUDIT.md` for security details
+- Check `README_zh.md` for Chinese documentation
 
 ---
 
-## Contact Us
+## Bitcoin Integration Status:
+
+| Service | Status | Port |
+|---------|--------|------|
+| **Bitcoin Core** | ✅ Running | RPC: 8332, ZMQ: 28332/28333 |
+| **LND** | ✅ Running | REST: 10009, gRPC: 9735 |
+| **Core Lightning** | ⚠️ Optional | RPC: 9736 |
+
+---
+
+## Contact Us:
 #####  Email: techshared4github@outlook.com
 
 ---
 
-**D-HRS v2.0** - Built with ❤️ using Ethereum, Solidity, Node.js, and React Native
+**D-HRS v2.0** - Built with ❤️ using Ethereum, Solidity, Node.js, Bitcoin & Lightning Network

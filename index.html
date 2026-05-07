@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D-HRS v2.0 - Decentralized HR System</title>
     <script type="module">
-        import { createWalletClient, createPublicClient, http } from 'https://esm.sh/viem';
-        window.viem = { createWalletClient, createPublicClient, http };
+        import { createWalletClient, createPublicClient, http, custom } from 'https://esm.sh/viem';
+        import { WalletConnectConnector } from 'https://esm.sh/@wagmi/connectors@^2.0.0';
+        window.viem = { createWalletClient, createPublicClient, http, custom };
+        window.WalletConnectConnector = WalletConnectConnector;
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -400,7 +402,7 @@
                         <span class="status-dot disconnected" id="status-dot"></span>
                         <span id="status-text">Disconnected</span>
                     </div>
-                    <button class="btn" id="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
+                    <button class="btn" id="wallet-btn" onclick="showWalletModal()">Connect Wallet</button>
                 </div>
             </div>
 
@@ -575,6 +577,34 @@
         </main>
     </div>
 
+    <!-- Wallet Selection Modal -->
+    <div id="wallet-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center;">
+        <div style="background:var(--bg-surface); border-radius:var(--radius-lg); padding:2rem; max-width:400px; width:90%; box-shadow:var(--shadow-lg);">
+            <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:1.5rem;">Connect Wallet</h3>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <button class="btn btn-secondary" onclick="connectBrowserWallet()" style="justify-content:flex-start; padding:16px; font-size:1rem;">
+                    <span style="font-size:1.5rem; margin-right:12px;">🦊</span>
+                    <div style="text-align:left;">
+                        <div style="font-weight:600;">Browser Wallet</div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary);">MetaMask, Rabby, Brave Wallet</div>
+                    </div>
+                </button>
+                <button class="btn btn-secondary" onclick="connectWalletConnect()" style="justify-content:flex-start; padding:16px; font-size:1rem;">
+                    <span style="font-size:1.5rem; margin-right:12px;">📱</span>
+                    <div style="text-align:left;">
+                        <div style="font-weight:600;">Mobile Wallet</div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary);">Trust Wallet, Rainbow, MetaMask Mobile</div>
+                    </div>
+                </button>
+            </div>
+            <button class="btn btn-secondary" onclick="closeWalletModal()" style="margin-top:1rem; width:100%;">Cancel</button>
+            <div id="wc-qr-container" style="display:none; margin-top:1rem; text-align:center;">
+                <p style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:12px;">Scan with your mobile wallet</p>
+                <div id="wc-qr-code" style="background:white; padding:16px; border-radius:var(--radius-sm); display:inline-block;"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const CONFIG = {
             contracts: {
@@ -593,12 +623,16 @@
         };
 
         let walletClient = null, publicClient = null, account = null, chainId = null;
+        let walletConnector = null; // For WalletConnect
 
         window.addEventListener('load', async () => {
+            // Check for existing browser wallet connection
             if (typeof window.ethereum !== 'undefined') {
                 try {
                     const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                    if (accounts.length > 0) connectWallet();
+                    if (accounts.length > 0) {
+                        await connectWithBrowserWallet(accounts);
+                    }
                 } catch (e) {}
             }
         });
@@ -616,13 +650,34 @@
             el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
-        async function connectWallet() {
-            if (typeof window.ethereum === 'undefined') return showAlert('Install MetaMask', 'error');
+        function showWalletModal() {
+            document.getElementById('wallet-modal').style.display = 'flex';
+        }
+
+        function closeWalletModal() {
+            document.getElementById('wallet-modal').style.display = 'none';
+            document.getElementById('wc-qr-container').style.display = 'none';
+        }
+
+        async function connectBrowserWallet() {
+            closeWalletModal();
+            if (typeof window.ethereum === 'undefined') {
+                showAlert('No browser wallet found. Please install MetaMask or Rabby.', 'error');
+                return;
+            }
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                await connectWithBrowserWallet(accounts);
+            } catch (e) {
+                showAlert('Connection failed: ' + e.message, 'error');
+            }
+        }
+
+        async function connectWithBrowserWallet(accounts) {
             try {
                 document.getElementById('status-dot').className = 'status-dot connecting';
                 document.getElementById('status-text').textContent = 'Connecting...';
-                
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+
                 account = accounts[0];
                 chainId = parseInt(await window.ethereum.request({ method: 'eth_chainId' }), 16);
 
@@ -630,20 +685,7 @@
                 walletClient = createWalletClient({ account, chain: getViemChain(chainId), transport: http() });
                 publicClient = createPublicClient({ chain: getViemChain(chainId), transport: http() });
 
-                document.getElementById('status-dot').className = 'status-dot connected';
-                document.getElementById('status-text').textContent = 'Connected';
-                document.getElementById('wallet-btn').textContent = shortenAddress(account);
-                
-                const net = CONFIG.networks[chainId] || { name: `Chain ${chainId}`, type: 'unknown' };
-                const badge = document.getElementById('network-badge');
-                badge.textContent = net.name;
-                badge.className = `network-badge ${net.type}`;
-
-                document.getElementById('info-chain-id').textContent = chainId;
-                document.getElementById('info-network-name').textContent = net.name;
-
-                // Enable buttons
-                document.querySelectorAll('.btn').forEach(b => b.disabled = false);
+                updateConnectedState();
                 showAlert('Wallet connected successfully', 'success');
             } catch (e) {
                 document.getElementById('status-dot').className = 'status-dot disconnected';
@@ -652,8 +694,76 @@
             }
         }
 
+        async function connectWalletConnect() {
+            closeWalletModal();
+            try {
+                document.getElementById('status-dot').className = 'status-dot connecting';
+                document.getElementById('status-text').textContent = 'Connecting...';
+
+                // Initialize WalletConnect
+                const { WalletConnectConnector } = window.WalletConnectConnector;
+                walletConnector = new WalletConnectConnector({
+                    projectId: 'YOUR_WALLETCONNECT_PROJECT_ID', // Get from https://cloud.walletconnect.com
+                    chains: [31337], // Hardhat local chain
+                    showQrModal: true, // Show QR code modal
+                    qrModalOptions: {
+                        themeMode: 'light'
+                    }
+                });
+
+                // Connect and get accounts
+                const accounts = await walletConnector.getAccounts();
+                if (accounts.length === 0) {
+                    throw new Error('No accounts found');
+                }
+
+                account = accounts[0];
+                chainId = 31337; // Hardhat
+
+                const { createWalletClient, createPublicClient, custom } = window.viem;
+                walletClient = createWalletClient({
+                    account,
+                    chain: getViemChain(chainId),
+                    transport: custom(walletConnector)
+                });
+                publicClient = createPublicClient({
+                    chain: getViemChain(chainId),
+                    transport: custom(walletConnector)
+                });
+
+                updateConnectedState();
+                showAlert('Mobile wallet connected successfully', 'success');
+            } catch (e) {
+                console.error(e);
+                document.getElementById('status-dot').className = 'status-dot disconnected';
+                document.getElementById('status-text').textContent = 'Disconnected';
+                showAlert('WalletConnect failed: ' + e.message, 'error');
+            }
+        }
+
+        function updateConnectedState() {
+            document.getElementById('status-dot').className = 'status-dot connected';
+            document.getElementById('status-text').textContent = 'Connected';
+            document.getElementById('wallet-btn').textContent = shortenAddress(account);
+
+            const net = CONFIG.networks[chainId] || { name: `Chain ${chainId}`, type: 'unknown' };
+            const badge = document.getElementById('network-badge');
+            badge.textContent = net.name;
+            badge.className = `network-badge ${net.type}`;
+
+            document.getElementById('info-chain-id').textContent = chainId;
+            document.getElementById('info-network-name').textContent = net.name;
+
+            // Enable buttons
+            document.querySelectorAll('.btn').forEach(b => b.disabled = false);
+        }
+
         function getViemChain(id) {
-            return { id: 31337, name: 'Localhost', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['http://127.0.0.1:9555'] } } };
+            const chains = {
+                31337: { id: 31337, name: 'Hardhat', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['http://127.0.0.1:8545'] } } },
+                11155111: { id: 11155111, name: 'Sepolia', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://sepolia.infura.io/v3/YOUR_KEY'] } } }
+            };
+            return chains[id] || chains[31337];
         }
 
         function showAlert(msg, type) {

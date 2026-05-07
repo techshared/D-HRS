@@ -53,6 +53,111 @@ app.get('/api/v1/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
 });
 
+// Authentication endpoints
+app.get('/api/v1/auth/challenge', (req, res) => {
+  try {
+    const challenge = require('crypto').randomBytes(32).toString('hex');
+    res.json({ success: true, data: { challenge } });
+  } catch (error) {
+    logger.error('Auth challenge error', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+app.post('/api/v1/auth/connect', async (req, res) => {
+  try {
+    const { did, challenge, signature } = req.body;
+    if (!did || !challenge || !signature) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+    const isValid = await lnd.verifyMessage(challenge, signature);
+    if (isValid) {
+      res.json({ success: true, data: { did, authenticated: true } });
+    } else {
+      res.status(401).json({ success: false, error: 'Invalid signature' });
+    }
+  } catch (error) {
+    logger.error('Auth connect error', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Employee salary adjustment
+app.post('/api/v1/employees/:did/salary', async (req, res) => {
+  try {
+    const { did } = req.params;
+    const { salary } = req.body;
+    if (!salary) {
+      return res.status(400).json({ success: false, error: 'Missing salary' });
+    }
+    const employee = employees.get(did);
+    if (!employee) {
+      return res.status(404).json({ success: false, error: 'Employee not found' });
+    }
+    employee.salary = salary;
+    employee.updated_at = new Date().toISOString();
+    res.json({ success: true, data: { did, salary, status: 'updated' } });
+  } catch (error) {
+    logger.error('Salary adjustment error', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Employee transfer
+app.post('/api/v1/employees/:did/transfer', (req, res) => {
+  try {
+    const { did } = req.params;
+    const { new_department, new_position } = req.body;
+    const employee = employees.get(did);
+    if (!employee) {
+      return res.status(404).json({ success: false, error: 'Employee not found' });
+    }
+    if (new_department) employee.department = new_department;
+    if (new_position) employee.position = new_position;
+    employee.updated_at = new Date().toISOString();
+    res.json({ success: true, data: { did, transfer: 'completed' } });
+  } catch (error) {
+    logger.error('Transfer error', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Employee promotion
+app.post('/api/v1/employees/:did/promotion', async (req, res) => {
+  try {
+    const { did } = req.params;
+    const { new_position, salary_increase } = req.body;
+    const employee = employees.get(did);
+    if (!employee) {
+      return res.status(404).json({ success: false, error: 'Employee not found' });
+    }
+    if (new_position) employee.position = new_position;
+    if (salary_increase) employee.salary = (employee.salary || 0) + salary_increase;
+    employee.updated_at = new Date().toISOString();
+    res.json({ success: true, data: { did, promotion: 'completed' } });
+  } catch (error) {
+    logger.error('Promotion error', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+// Employee layoff
+app.post('/api/v1/employees/:did/layoff', async (req, res) => {
+  try {
+    const { did } = req.params;
+    const employee = employees.get(did);
+    if (!employee) {
+      return res.status(404).json({ success: false, error: 'Employee not found' });
+    }
+    employee.status = 'laid_off';
+    employee.updated_at = new Date().toISOString();
+    res.json({ success: true, data: { did, layoff: 'completed' } });
+  } catch (error) {
+    logger.error('Layoff error', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
 // Get contract addresses
 app.get('/api/v1/contracts', (req, res) => {
   res.json({ success: true, data: CONTRACT_ADDRESSES });

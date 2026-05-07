@@ -1,0 +1,27 @@
+{
+  "bitcoin": {
+    "rpc_host": "127.0.0.1",
+    "rpc_port": 8332,
+    "rpc_user": "btc_rpc_user",
+    "rpc_password": "StrongPassw0rd_123",
+    "zmq_block": "tcp://127.0.0.1:28332",
+    "zmq_tx": "tcp://127.0.0.1:28333",
+    "network": "mainnet"
+  },
+  "lnd": {
+    "host": "127.0.0.1",
+    "port": 10009,
+    "tls_cert_path": "",
+    "macaroon_path": "~/.lnd/admin.macaroon"
+  },
+  "clightning": {
+    "rpc_path": "~/.lightning/bitcoin/lightning-rpc",
+    "host": "127.0.0.1",
+    "port": 9736
+  },
+  "payment": {
+    "default_method": "lightning",
+    "confirmation_blocks": 1,
+    "lightning_fee_limit": 1000
+  }
+}
