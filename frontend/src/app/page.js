@@ -1,144 +1,217 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toggleLang } from './i18n';
 import './styles.css';
 
-const CONTRACT_ADDRESSES = {
-  employeeRegistry: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-  credentialRegistry: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
-  payrollExecutor: '0x9fE46736679d2D9a65F0992F2272dE9f3c78766A',
-  benefitsNFT: '0x0DCd1Bf3A1cD10D4bEb7d76Ea900c1e9E9fD0a6',
-  hrGovernance: '0x2279B7A0a67DB72A27a1d208c9D0C6B2d8Ae4F3A',
-  didRegistry: '0xACa94A711d0A09F64F2e0dE3f5A99e9c0aF7f0d'
-};
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://127.0.0.1:3001/api/v1';
 
-// Minimal ABI for reading
 const EMPLOYEE_REGISTRY_ABI = [
-  "function getEmployee(bytes32 _did) view returns (tuple(bytes32 did, string personalInfoHash, string role, string department, uint256 salary, uint256 startDate, uint256 status, string credentialsRoot, uint256 createdAt, uint256 updatedAt))",
+  "function getEmployee(bytes32 _did) view returns (tuple(bytes32 did, string personalInfoHash, string role, string department, uint256 startDate, uint256 status, string credentialsRoot, uint256 createdAt, uint256 updatedAt))",
   "function employeeCount() view returns (uint256)",
-  "function getAllEmployees() view returns (tuple[])"
 ];
 
+function LangToggle() {
+  const { i18n } = useTranslation();
+  const next = i18n.language === 'en' ? 'zh' : 'en';
+  const label = next === 'en' ? 'EN' : '中文';
+  return (
+    <button className="lang-toggle" onClick={() => toggleLang()}>
+      {label}
+    </button>
+  );
+}
+
 export default function Home() {
+  const { t } = useTranslation();
   const [account, setAccount] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [proposals, setProposals] = useState([]);
+  const [payrollRuns, setPayrollRuns] = useState([]);
 
   useEffect(() => {
     checkConnection();
   }, []);
 
   const checkConnection = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const accounts = await provider.listAccounts();
-        if (accounts.length > 0) {
-          setAccount(accounts[0].address);
-        }
-      } catch (err) {
-        console.error('Error checking connection:', err);
+    // Check if wallet is connected via the backend auth session
+    try {
+      const res = await fetch(`${API_BASE}/health`);
+      const data = await res.json();
+      if (data.success) {
+        setAccount('server_session');
       }
+    } catch (err) {
+      console.error('Backend health check failed:', err);
     }
   };
 
-  const connectWallet = async () => {
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const address = await signer.getAddress();
-        setAccount(address);
+  const handleLogin = async () => {
+    // China-compliant login: no wallet connection, use backend KYC session
+    try {
+      const challengeRes = await fetch(`${API_BASE}/auth/challenge`);
+      const challengeData = await challengeRes.json();
+      if (!challengeData.success) {
+        setError(t('error.loginFailed'));
+        return;
+      }
+      // In production, this would trigger KYC/real-name auth flow
+      const loginRes = await fetch(`${API_BASE}/auth/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: 'local_user' }),
+      });
+      const loginData = await loginRes.json();
+      if (loginData.success) {
+        setAccount(loginData.data.wallet_address);
         setError(null);
-      } catch (err) {
-        setError('Failed to connect wallet');
-        console.error(err);
       }
-    } else {
-      setError('Please install MetaMask!');
+    } catch (err) {
+      setError(t('error.loginFailed'));
+      console.error(err);
     }
   };
 
-  const loadEmployees = async () => {
+  const loadEmployees = useCallback(async () => {
     if (!account) return;
     setLoading(true);
     try {
-      // Simulate loading employees (in production, fetch from blockchain/API)
-      const mockEmployees = [
-        { did: '0x1234', role: 'CEO', department: 'Executive', salary: 200000, status: 1 },
-        { did: '0x5678', role: 'CTO', department: 'Engineering', salary: 180000, status: 1 },
-        { did: '0x9abc', role: 'Senior Engineer', department: 'Engineering', salary: 150000, status: 1 },
-        { did: '0xdef0', role: 'Product Manager', department: 'Product', salary: 130000, status: 1 },
-      ];
-      setEmployees(mockEmployees);
+      const res = await fetch(`${API_BASE}/employees`);
+      const data = await res.json();
+      if (data.success) {
+        setEmployees(data.data.employees || []);
+      }
     } catch (err) {
-      setError('Failed to load employees');
+      setError(t('error.loadEmployees'));
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [account]);
+
+  const loadProposals = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/governance/proposals`);
+      const data = await res.json();
+      if (data.success) {
+        setProposals(data.data.proposals || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const loadPayroll = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/payroll/history`);
+      const data = await res.json();
+      if (data.success) {
+        setPayrollRuns(data.data.payroll_runs || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
 
   useEffect(() => {
-    if (activeTab === 'employees') {
-      loadEmployees();
+    if (activeTab === 'employees') loadEmployees();
+    if (activeTab === 'governance') loadProposals();
+    if (activeTab === 'payroll') loadPayroll();
+  }, [activeTab, loadEmployees, loadProposals, loadPayroll]);
+
+  const handleCreateProposal = async () => {
+    const title = prompt(t('governance.promptTitle') || 'Enter proposal title');
+    const description = prompt(t('governance.promptDesc') || 'Enter proposal description');
+    if (!title || !description) return;
+    try {
+      const res = await fetch(`${API_BASE}/governance/proposals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        loadProposals();
+      } else {
+        setError(data.error || t('error.createProposal'));
+      }
+    } catch (err) {
+      setError(t('error.createProposal'));
+      console.error(err);
     }
-  }, [activeTab, account]);
+  };
+
+  const handleVote = async (proposalId, support) => {
+    try {
+      const res = await fetch(`${API_BASE}/governance/proposals/${proposalId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ support, weight: 1 }),
+      });
+      const data = await res.json();
+      if (!data.success) setError(data.error || t('error.vote'));
+      else loadProposals();
+    } catch (err) {
+      setError(t('error.vote'));
+      console.error(err);
+    }
+  };
 
   return (
     <div className="container">
       <header className="header">
         <div className="logo">
-          <h1>D-HRS</h1>
-          <span>Decentralized HR System</span>
+          <h1>{t('app.title')}</h1>
+          <span>{t('app.subtitle')}</span>
         </div>
         <div className="wallet-section">
           {account ? (
             <div className="connected">
-              <span className="address">{account.slice(0, 6)}...{account.slice(-4)}</span>
-              <span className="status">Connected</span>
+              <span className="status">{t('status.connected')}</span>
             </div>
           ) : (
-            <button className="connect-btn" onClick={connectWallet}>
-              Connect Wallet
+            <button className="connect-btn" onClick={handleLogin}>
+              {t('login.login')}
             </button>
           )}
+          <LangToggle />
         </div>
       </header>
 
       <nav className="nav">
-        <button 
+        <button
           className={`nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
         >
-          Dashboard
+          {t('tabs.dashboard')}
         </button>
-        <button 
+        <button
           className={`nav-btn ${activeTab === 'employees' ? 'active' : ''}`}
           onClick={() => setActiveTab('employees')}
         >
-          Employees
+          {t('tabs.employees')}
         </button>
-        <button 
+        <button
           className={`nav-btn ${activeTab === 'payroll' ? 'active' : ''}`}
           onClick={() => setActiveTab('payroll')}
         >
-          Payroll
+          {t('tabs.payroll')}
         </button>
-        <button 
+        <button
           className={`nav-btn ${activeTab === 'credentials' ? 'active' : ''}`}
           onClick={() => setActiveTab('credentials')}
         >
-          Credentials
+          {t('tabs.credentials')}
         </button>
-        <button 
+        <button
           className={`nav-btn ${activeTab === 'governance' ? 'active' : ''}`}
           onClick={() => setActiveTab('governance')}
         >
-          Governance
+          {t('tabs.governance')}
         </button>
       </nav>
 
@@ -147,36 +220,29 @@ export default function Home() {
 
         {activeTab === 'dashboard' && (
           <div className="dashboard">
-            <h2>System Overview</h2>
+            <h2>{t('dashboard.title')}</h2>
             <div className="stats-grid">
               <div className="stat-card">
-                <h3>Total Employees</h3>
+                <h3>{t('dashboard.totalEmployees')}</h3>
                 <p className="stat-value">{employees.length || 0}</p>
               </div>
               <div className="stat-card">
-                <h3>Active Employees</h3>
+                <h3>{t('dashboard.activeEmployees')}</h3>
                 <p className="stat-value">{employees.filter(e => e.status === 1).length || 0}</p>
               </div>
               <div className="stat-card">
-                <h3>Departments</h3>
+                <h3>{t('dashboard.departments')}</h3>
                 <p className="stat-value">{new Set(employees.map(e => e.department)).size || 0}</p>
               </div>
               <div className="stat-card">
-                <h3>Payroll Status</h3>
-                <p className="stat-value">Active</p>
+                <h3>{t('dashboard.payrollStatus')}</h3>
+                <p className="stat-value">{t('dashboard.active')}</p>
               </div>
             </div>
 
             <div className="contracts-section">
-              <h3>Deployed Contracts</h3>
-              <div className="contracts-list">
-                {Object.entries(CONTRACT_ADDRESSES).map(([name, address]) => (
-                  <div key={name} className="contract-item">
-                    <span className="contract-name">{name}</span>
-                    <span className="contract-address">{address.slice(0, 10)}...{address.slice(-8)}</span>
-                  </div>
-                ))}
-              </div>
+              <h3>{t('dashboard.contracts')}</h3>
+              <p className="contract-note">{t('dashboard.contractNote')}</p>
             </div>
           </div>
         )}
@@ -184,22 +250,19 @@ export default function Home() {
         {activeTab === 'employees' && (
           <div className="employees-section">
             <div className="section-header">
-              <h2>Employee Management</h2>
-              <button className="action-btn">+ Add Employee</button>
+              <h2>{t('employees.title')}</h2>
             </div>
-            
+
             {loading ? (
-              <div className="loading">Loading employees...</div>
+              <div className="loading">{t('employees.loading')}</div>
             ) : (
               <table className="employees-table">
                 <thead>
                   <tr>
-                    <th>DID</th>
-                    <th>Role</th>
-                    <th>Department</th>
-                    <th>Salary</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>{t('employees.did')}</th>
+                    <th>{t('employees.role')}</th>
+                    <th>{t('employees.department')}</th>
+                    <th>{t('employees.status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -207,12 +270,8 @@ export default function Home() {
                     <tr key={index}>
                       <td>{emp.did}</td>
                       <td>{emp.role}</td>
-                      <td>{emp.department}</td>
-                      <td>${emp.salary.toLocaleString()}</td>
-                      <td><span className="status-badge active">Active</span></td>
-                      <td>
-                        <button className="view-btn">View</button>
-                      </td>
+                      <td>{emp.department || '-'}</td>
+                      <td><span className="status-badge active">{t('dashboard.active')}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -223,63 +282,73 @@ export default function Home() {
 
         {activeTab === 'payroll' && (
           <div className="payroll-section">
-            <h2>Payroll Management</h2>
-            <div className="payroll-actions">
-              <button className="action-btn primary">Create Payroll Run</button>
-              <button className="action-btn">View History</button>
-            </div>
+            <h2>{t('payroll.title')}</h2>
             <div className="payroll-status">
-              <div className="status-card">
-                <h3>Current Period</h3>
-                <p>January 2024</p>
-              </div>
-              <div className="status-card">
-                <h3>Total Amount</h3>
-                <p>$560,000</p>
-              </div>
-              <div className="status-card">
-                <h3>Status</h3>
-                <p>Processing</p>
-              </div>
+              {payrollRuns.length === 0 ? (
+                <p className="placeholder">{t('payroll.empty')}</p>
+              ) : (
+                payrollRuns.map((run) => (
+                  <div key={run.id} className="status-card">
+                    <h3>{t('payroll.runTitle')} #{run.id}</h3>
+                    <p>{t('payroll.period')}: {run.period_start?.slice(0, 10)} - {run.period_end?.slice(0, 10)}</p>
+                    <p>{t('payroll.totalAmount')}: {run.total_amount}</p>
+                    <p>{t('payroll.status')}: {run.status}</p>
+                    <p>{t('payroll.approvals')}: {run.current_approvals}/{run.required_approvals}</p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
 
         {activeTab === 'credentials' && (
           <div className="credentials-section">
-            <h2>Verifiable Credentials</h2>
-            <div className="credential-actions">
-              <button className="action-btn">Issue Credential</button>
-              <button className="action-btn">Verify Credential</button>
-            </div>
+            <h2>{t('credentials.title')}</h2>
             <div className="credentials-list">
-              <p className="placeholder">No credentials issued            </div>
- yet</p>
+              <p className="placeholder">{t('credentials.empty')}</p>
+            </div>
           </div>
         )}
 
         {activeTab === 'governance' && (
           <div className="governance-section">
-            <h2>HR Governance</h2>
-            <button className="action-btn">Create Proposal</button>
+            <h2>{t('governance.title')}</h2>
+            {account ? (
+              <button className="action-btn" onClick={handleCreateProposal}>
+                {t('governance.create')}
+              </button>
+            ) : (
+              <p className="placeholder">{t('governance.loginRequired')}</p>
+            )}
             <div className="proposals-list">
-              <div className="proposal-card">
-                <h3>Update Remote Work Policy</h3>
-                <p>Proposal to allow 4 days remote work per week</p>
-                <div className="proposal-votes">
-                  <span className="vote for">For: 45</span>
-                  <span className="vote against">Against: 12</span>
-                  <span className="vote abstain">Abstain: 3</span>
-                </div>
-                <button className="vote-btn">Vote</button>
-              </div>
+              {proposals.length === 0 ? (
+                <p className="placeholder">{t('governance.empty')}</p>
+              ) : (
+                proposals.map((prop) => (
+                  <div key={prop.id} className="proposal-card">
+                    <h3>{prop.title}</h3>
+                    <p>{prop.description}</p>
+                    <div className="proposal-votes">
+                      <span className="vote for">{t('governance.for')} {prop.for_votes || 0}</span>
+                      <span className="vote against">{t('governance.against')} {prop.against_votes || 0}</span>
+                      <span className="vote abstain">{t('governance.abstain')} {prop.abstain_votes || 0}</span>
+                    </div>
+                    {account && (
+                      <div className="proposal-actions">
+                        <button className="vote-btn" onClick={() => handleVote(prop.id, true)}>{t('governance.voteFor')}</button>
+                        <button className="vote-btn against" onClick={() => handleVote(prop.id, false)}>{t('governance.voteAgainst')}</button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
       </main>
 
       <footer className="footer">
-        <p>D-HRS v2.0 - Built with Ethereum, Layer 2, and ERC-4337</p>
+        <p>{t('app.footer')}</p>
       </footer>
     </div>
   );

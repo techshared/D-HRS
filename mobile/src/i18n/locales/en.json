@@ -1,0 +1,92 @@
+{
+  "app": {
+    "title": "D-HRS v2.0",
+    "modeLocal": "Local"
+  },
+  "status": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "localApi": "Local API",
+    "offline": "Offline",
+    "connecting": "Connecting..."
+  },
+  "tabs": {
+    "dashboard": "Dashboard",
+    "employees": "Employees",
+    "credentials": "Credentials",
+    "payroll": "Payroll",
+    "governance": "Governance"
+  },
+  "kyc": {
+    "title": "Real Name Verification",
+    "subtitle": "Please enter your ID number to complete verification",
+    "walletPlaceholder": "Wallet address (optional)",
+    "idPlaceholder": "National ID number",
+    "submit": "Submit Verification",
+    "invalidId": "Please enter a valid 18-digit ID number",
+    "success": "Real name verification approved",
+    "basic": "Basic",
+    "enhanced": "Enhanced",
+    "expired": "Expired"
+  },
+  "compliance": {
+    "title": "Compliance Dashboard",
+    "kycStats": "KYC Statistics",
+    "sanctions": "Sanctions List",
+    "sanctionsCount": "Addresses flagged",
+    "lastUpdate": "Last updated"
+  },
+  "dashboard": {
+    "sectionTitle": "System Overview",
+    "totalEmployees": "Total Employees",
+    "active": "Active",
+    "credentials": "Credentials",
+    "proposals": "Proposals"
+  },
+  "employees": {
+    "title": "Employees",
+    "add": "+ Add",
+    "empty": "No employees registered yet",
+    "did": "DID",
+    "role": "Role",
+    "department": "Department",
+    "status": "Status"
+  },
+  "credentials": {
+    "title": "Credentials",
+    "placeholder": "Employee DID to view",
+    "empty": "No credentials for this employee",
+    "emptyAll": "No credentials issued yet",
+    "status": "Status",
+    "expires": "Expires"
+  },
+  "payroll": {
+    "title": "Payroll",
+    "run": "+ Run",
+    "empty": "No payroll history",
+    "runTitle": "Run",
+    "amount": "Amount",
+    "approvals": "Approvals"
+  },
+  "governance": {
+    "title": "Governance",
+    "add": "+ Proposal",
+    "empty": "No active proposals",
+    "for": "For",
+    "against": "Against",
+    "voteFor": "Vote For",
+    "voteAgainst": "Vote Against"
+  },
+  "form": {
+    "title": "Title",
+    "description": "Description",
+    "cancel": "Cancel",
+    "create": "Create",
+    "submit": "Submit",
+    "close": "Close"
+  },
+  "alert": {
+    "error": "Error",
+    "success": "Success"
+  }
+}

@@ -5,6 +5,12 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
+/**
+ * @title BenefitsNFT
+ * @notice Soulbound NFT for employee benefits. Transfers are blocked —
+ *         only minting (by MINTER) and burning (by BURNER) are allowed.
+ *         China compliance: non-transferable NFTs avoid financial instrument classification.
+ */
 contract BenefitsNFT is ERC721, AccessControl, Pausable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
@@ -23,17 +29,27 @@ contract BenefitsNFT is ERC721, AccessControl, Pausable {
     mapping(bytes32 => uint256[]) public employeeBenefits;
     uint256 public nextTokenId;
 
-    event BenefitMinted(
-        uint256 indexed tokenId,
-        bytes32 indexed employeeDid,
-        string benefitType
-    );
+    event BenefitMinted(uint256 indexed tokenId, bytes32 indexed employeeDid, string benefitType);
     event BenefitRevoked(uint256 indexed tokenId);
 
     constructor() ERC721("D-HRS Benefits", "DBNFT") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
         _grantRole(BURNER_ROLE, msg.sender);
+    }
+
+    /**
+     * @dev Block all transfers. Only mint (from == 0) and burn (to == 0) allowed.
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256 batchSize
+    ) internal virtual override {
+        // Allow mint (from == 0) and burn (to == 0)
+        require(from == address(0) || to == address(0), "BenefitsNFT: non-transferable");
+        super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
 
     function mintBenefit(
@@ -65,33 +81,23 @@ contract BenefitsNFT is ERC721, AccessControl, Pausable {
         return benefitDetails[tokenId].tokenURI_;
     }
 
-    function revokeBenefit(uint256 _tokenId) 
-        external 
-        onlyRole(BURNER_ROLE) 
-    {
+    function revokeBenefit(uint256 _tokenId) external onlyRole(BURNER_ROLE) {
         require(_ownerOf(_tokenId) != address(0), "Token not exists");
-        
         benefitDetails[_tokenId].active = false;
         _burn(_tokenId);
-        
         emit BenefitRevoked(_tokenId);
     }
 
-    function getEmployeeBenefits(bytes32 _employeeDid) 
-        external 
-        view 
-        returns (uint256[] memory) 
+    function getEmployeeBenefits(bytes32 _employeeDid)
+        external
+        view
+        returns (uint256[] memory)
     {
         return employeeBenefits[_employeeDid];
     }
 
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
-    }
-
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
-    }
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) { _pause(); }
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) { _unpause(); }
 
     function supportsInterface(bytes4 interfaceId)
         public

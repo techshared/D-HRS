@@ -348,7 +348,8 @@ contract CredentialRegistry is AccessControlUpgradeable, PausableUpgradeable {
 
 /**
  * @title PayrollExecutor
- * @dev Executes payroll with multi-sig approval and on-chain recording
+ * @dev Approval-only payroll workflow. Records multi-sig approvals on-chain;
+ *      actual salary disbursement is handled off-chain via banking channels.
  */
 contract PayrollExecutor is AccessControlUpgradeable, PausableUpgradeable {
     bytes32 public constant HR_ADMIN_ROLE = keccak256("HR_ADMIN_ROLE");
@@ -761,123 +762,7 @@ contract HRGovernance is AccessControlUpgradeable, PausableUpgradeable {
 }
 
 // ============================================
-// PART 6: ACCOUNT FACTORY (ERC-4337)
-// ============================================
-
-/**
- * @title DHRSSmartAccount
- * @dev Smart contract wallet for employees (ERC-4337 compatible)
- */
-contract DHRSSmartAccount is IAccount, EIP712 {
-    address public owner;
-    address public entryPoint;
-    
-    mapping(address => uint256) public nonces;
-    mapping(address => bool) public guardians;
-    uint256 public threshold;
-    
-    event Executed(address target, uint256 value, bytes data);
-    event GuardianAdded(address guardian);
-    event GuardianRemoved(address guardian);
-    
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not owner");
-        _;
-    }
-    
-    constructor(address _owner, address _entryPoint) EIP712("D-HRS Account", "1") {
-        owner = _owner;
-        entryPoint = _entryPoint;
-        threshold = 1;
-    }
-    
-    /**
-     * @dev Execute transaction
-     */
-    function execute(address dest, bytes calldata func) external {
-        require(msg.sender == owner || msg.sender == entryPoint, "Not authorized");
-        
-        (bool success, bytes memory result) = dest.call(func);
-        require(success, "Call failed");
-        
-        emit Executed(dest, 0, func);
-    }
-    
-    /**
-     * @dev Validate user operation (ERC-4337)
-     */
-    function validateUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256
-    ) external returns (uint256 validationData) {
-        require(msg.sender == entryPoint, "Not entryPoint");
-        
-        bytes32 hash = ECDSA.toTypedDataHash(
-            domainSeparator(),
-            keccak256(abi.encode(userOp.nonce, userOp.initCode, userOp.callData))
-        );
-        
-        if (ECDSA.recover(hash, userOp.signature) == owner) {
-            return 0; // Valid
-        }
-        return 1; // Invalid signature
-    }
-    
-    /**
-     * @dev Add guardian for social recovery
-     */
-    function addGuardian(address _guardian) external onlyOwner {
-        guardians[_guardian] = true;
-        emit GuardianAdded(_guardian);
-    }
-    
-    /**
-     * @dev Social recovery
-     */
-    function recover(address _newOwner) external {
-        require(guardians[msg.sender], "Not guardian");
-        owner = _newOwner;
-    }
-}
-
-/**
- * @title DHRSSmartAccountFactory
- * @dev Factory for creating employee smart accounts
- */
-contract DHRSSmartAccountFactory {
-    mapping(address => address) public accountOwners;
-    
-    event AccountCreated(address indexed owner, address indexed account);
-    
-    function createAccount(address _owner, address _entryPoint) 
-        external 
-        returns (address account) 
-    {
-        if (accountOwners[_owner] != address(0)) {
-            return accountOwners[_owner];
-        }
-        
-        bytes32 salt = keccak256(abi.encodePacked(_owner));
-        bytes memory bytecode = type(DHRSSmartAccount).creationCode;
-        
-        assembly {
-            account := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        }
-        
-        DHRSSmartAccount(account).initialize(_owner, _entryPoint);
-        accountOwners[_owner] = account;
-        
-        emit AccountCreated(_owner, account);
-    }
-    
-    function getAccount(address _owner) external view returns (address) {
-        return accountOwners[_owner];
-    }
-}
-
-// ============================================
-// PART 7: DID REGISTRY
+// PART 6: DID REGISTRY
 // ============================================
 
 /**

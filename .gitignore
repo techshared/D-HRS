@@ -6,10 +6,10 @@ issues.txt
 *.pem
 *credentials*
 
-# Technical Diagrams (keep README)
-*.md
-!README.md
-!README_zh.md
+# Keep all markdown - they're project documentation
+# *.md  <-- REMOVED: this was hiding AGENTS.md, SECURITY_AUDIT.md, API specs, etc.
+#!README.md
+#!README_zh.md
 
 # Dependencies
 node_modules/
@@ -75,6 +75,9 @@ frontend/out/
 
 # Backend logs
 backend/logs/
+
+# Process ID files
+.pids/
 
 # Misc
 *.tmp

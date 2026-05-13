@@ -406,3 +406,20 @@ body {
   color: var(--text-light);
   font-size: 0.875rem;
 }
+
+/* Language Toggle */
+.lang-toggle {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.lang-toggle:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-hover);
+}

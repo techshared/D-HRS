@@ -8,6 +8,8 @@ contract HRGovernance is AccessControl, Pausable {
     bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
     bytes32 public constant VOTER_ROLE = keccak256("VOTER_ROLE");
 
+    enum VoteType { Against, For, Abstain }
+
     struct Proposal {
         uint256 id;
         string title;
@@ -39,7 +41,7 @@ contract HRGovernance is AccessControl, Pausable {
         uint256 indexed proposalId,
         address voter,
         uint256 weight,
-        bool support
+        VoteType voteType
     );
     event ProposalExecuted(uint256 indexed proposalId);
 
@@ -71,31 +73,33 @@ contract HRGovernance is AccessControl, Pausable {
 
     function castVote(
         uint256 _proposalId,
-        bool _support,
-        uint256 _weight
-    ) external onlyRole(VOTER_ROLE) {
+        VoteType _voteType
+    ) external onlyRole(VOTER_ROLE) whenNotPaused {
         Proposal storage proposal = proposals[_proposalId];
         require(proposal.status == 1, "Proposal not active");
         require(block.timestamp < proposal.endTime, "Voting ended");
         require(!hasVoted[_proposalId][msg.sender], "Already voted");
+
+        uint256 _weight = 1;
         
         hasVoted[_proposalId][msg.sender] = true;
         votes[_proposalId][msg.sender] = _weight;
         
-        if (_support) {
+        if (_voteType == VoteType.For) {
             proposal.forVotes += _weight;
-        } else if (_support == false) {
+        } else if (_voteType == VoteType.Against) {
             proposal.againstVotes += _weight;
         } else {
             proposal.abstainVotes += _weight;
         }
 
-        emit VoteCast(_proposalId, msg.sender, _weight, _support);
+        emit VoteCast(_proposalId, msg.sender, _weight, _voteType);
     }
 
     function executeProposal(uint256 _proposalId) 
         external 
-        onlyRole(DEFAULT_ADMIN_ROLE) 
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        whenNotPaused
     {
         Proposal storage proposal = proposals[_proposalId];
         require(proposal.status == 1, "Proposal not active");

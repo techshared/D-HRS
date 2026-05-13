@@ -1,18 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-interface IAIDataOracle {
-    function getSalaryBenchmark(string memory role, string memory department) external view returns (uint256);
-    function getPerformanceScore(address employee) external view returns (uint256);
-    function getMarketTrend(string memory metric) external view returns (int256);
-}
+contract HRAIOracle is AccessControl, Pausable, ReentrancyGuard {
+    bytes32 public constant ORACLE_ADMIN_ROLE = keccak256("ORACLE_ADMIN_ROLE");
+    bytes32 public constant HR_CONTRACT_ROLE = keccak256("HR_CONTRACT_ROLE");
 
-contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
-    
     struct SalaryBenchmark {
         string role;
         string department;
@@ -39,91 +35,20 @@ contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
     mapping(string => SalaryBenchmark) public salaryBenchmarks;
     mapping(address => EmployeePerformance) public employeePerformance;
     mapping(string => MarketData) public marketData;
-    
-    address[] public authorizedHRContracts;
-    
+
     event SalaryBenchmarkUpdated(string indexed role, string department, uint256 min, uint256 mid, uint256 max);
     event PerformanceScoreUpdated(address indexed employee, uint256 score);
     event MarketDataUpdated(string indexed metric, int256 value);
-    event AuthorizedContractAdded(address indexed contract_);
-    event AuthorizedContractRemoved(address indexed contract_);
 
     constructor() {
-        _initializeSalaryBenchmarks();
-        _initializeMarketData();
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ORACLE_ADMIN_ROLE, msg.sender);
+        _grantRole(HR_CONTRACT_ROLE, msg.sender);
     }
 
-    function _initializeSalaryBenchmarks() internal {
-        salaryBenchmarks["Software Engineer|Engineering"] = SalaryBenchmark({
-            role: "Software Engineer",
-            department: "Engineering",
-            minSalary: 80000,
-            midSalary: 120000,
-            maxSalary: 180000,
-            updatedAt: block.timestamp
-        });
-
-        salaryBenchmarks["Senior Engineer|Engineering"] = SalaryBenchmark({
-            role: "Senior Engineer",
-            department: "Engineering",
-            minSalary: 120000,
-            midSalary: 160000,
-            maxSalary: 220000,
-            updatedAt: block.timestamp
-        });
-
-        salaryBenchmarks["Product Manager|Product"] = SalaryBenchmark({
-            role: "Product Manager",
-            department: "Product",
-            minSalary: 90000,
-            midSalary: 130000,
-            maxSalary: 190000,
-            updatedAt: block.timestamp
-        });
-
-        salaryBenchmarks["Designer|Design"] = SalaryBenchmark({
-            role: "Designer",
-            department: "Design",
-            minSalary: 70000,
-            midSalary: 100000,
-            maxSalary: 150000,
-            updatedAt: block.timestamp
-        });
-
-        salaryBenchmarks["HR Manager|HR"] = SalaryBenchmark({
-            role: "HR Manager",
-            department: "HR",
-            minSalary: 75000,
-            midSalary: 110000,
-            maxSalary: 160000,
-            updatedAt: block.timestamp
-        });
-    }
-
-    function _initializeMarketData() internal {
-        marketData["tech_salary_trend"] = MarketData({
-            metric: "tech_salary_trend",
-            value: 5200,
-            updatedAt: block.timestamp
-        });
-
-        marketData["hiring_demand_index"] = MarketData({
-            metric: "hiring_demand_index",
-            value: 7850,
-            updatedAt: block.timestamp
-        });
-
-        marketData["remote_work_preference"] = MarketData({
-            metric: "remote_work_preference",
-            value: 8200,
-            updatedAt: block.timestamp
-        });
-
-        marketData["employee_turnover_index"] = MarketData({
-            metric: "employee_turnover_index",
-            value: 3100,
-            updatedAt: block.timestamp
-        });
+    modifier onlyAuthorized() {
+        require(hasRole(HR_CONTRACT_ROLE, msg.sender) || hasRole(ORACLE_ADMIN_ROLE, msg.sender), "Not authorized HR contract");
+        _;
     }
 
     function updateSalaryBenchmark(
@@ -132,9 +57,10 @@ contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
         uint256 minSalary,
         uint256 midSalary,
         uint256 maxSalary
-    ) external onlyOwner whenNotPaused {
+    ) external onlyRole(ORACLE_ADMIN_ROLE) whenNotPaused {
+        require(bytes(role).length > 0, "Role required");
         require(minSalary <= midSalary && midSalary <= maxSalary, "Invalid salary range");
-        
+
         string memory key = string(abi.encodePacked(role, "|", department));
         salaryBenchmarks[key] = SalaryBenchmark({
             role: role,
@@ -148,22 +74,31 @@ contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
         emit SalaryBenchmarkUpdated(role, department, minSalary, midSalary, maxSalary);
     }
 
-    function getSalaryBenchmark(string memory role, string memory department) 
-        external 
-        view 
-        whenNotPaused 
-        returns (uint256 min, uint256 mid, uint256 max) 
+    function removeSalaryBenchmark(string memory role, string memory department)
+        external
+        onlyRole(ORACLE_ADMIN_ROLE)
+        whenNotPaused
+    {
+        string memory key = string(abi.encodePacked(role, "|", department));
+        delete salaryBenchmarks[key];
+    }
+
+    function getSalaryBenchmark(string memory role, string memory department)
+        external
+        view
+        onlyAuthorized
+        returns (uint256 min, uint256 mid, uint256 max)
     {
         string memory key = string(abi.encodePacked(role, "|", department));
         SalaryBenchmark storage benchmark = salaryBenchmarks[key];
-        
+
         if (benchmark.midSalary == 0) {
             key = string(abi.encodePacked(role, "|", "General"));
             benchmark = salaryBenchmarks[key];
         }
-        
+
         require(benchmark.midSalary > 0, "Benchmark not found");
-        
+
         return (benchmark.minSalary, benchmark.midSalary, benchmark.maxSalary);
     }
 
@@ -172,13 +107,14 @@ contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
         uint256 performanceScore,
         uint256 peerRating,
         uint256 goalCompletion
-    ) external onlyOwner whenNotPaused {
+    ) external onlyRole(ORACLE_ADMIN_ROLE) whenNotPaused {
+        require(employee != address(0), "Invalid address");
         require(performanceScore <= 100, "Score must be 0-100");
         require(peerRating <= 100, "Peer rating must be 0-100");
         require(goalCompletion <= 100, "Goal completion must be 0-100");
 
         uint256 weightedScore = (performanceScore * 50 + peerRating * 30 + goalCompletion * 20) / 100;
-        
+
         employeePerformance[employee] = EmployeePerformance({
             employee: employee,
             performanceScore: weightedScore,
@@ -190,11 +126,11 @@ contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
         emit PerformanceScoreUpdated(employee, weightedScore);
     }
 
-    function getPerformanceScore(address employee) 
-        external 
-        view 
-        whenNotPaused 
-        returns (uint256 score) 
+    function getPerformanceScore(address employee)
+        external
+        view
+        onlyAuthorized
+        returns (uint256 score)
     {
         EmployeePerformance storage perf = employeePerformance[employee];
         require(perf.lastUpdated > 0, "No performance data");
@@ -204,7 +140,7 @@ contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
     function getEmployeePerformance(address employee)
         external
         view
-        whenNotPaused
+        onlyAuthorized
         returns (uint256 score, uint256 peerRating, uint256 goalCompletion, uint256 lastUpdated)
     {
         EmployeePerformance storage perf = employeePerformance[employee];
@@ -212,7 +148,8 @@ contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
         return (perf.performanceScore, perf.peerRating, perf.goalCompletion, perf.lastUpdated);
     }
 
-    function updateMarketData(string memory metric, int256 value) external onlyOwner whenNotPaused {
+    function updateMarketData(string memory metric, int256 value) external onlyRole(ORACLE_ADMIN_ROLE) whenNotPaused {
+        require(bytes(metric).length > 0, "Metric required");
         marketData[metric] = MarketData({
             metric: metric,
             value: value,
@@ -222,7 +159,7 @@ contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
         emit MarketDataUpdated(metric, value);
     }
 
-    function getMarketTrend(string memory metric) external view whenNotPaused returns (int256 value) {
+    function getMarketTrend(string memory metric) external view onlyAuthorized returns (int256 value) {
         MarketData storage data = marketData[metric];
         require(data.updatedAt > 0, "Metric not found");
         return data.value;
@@ -231,62 +168,36 @@ contract HRAIOracle is Ownable, Pausable, ReentrancyGuard {
     function getRecommendedSalary(address employee, string memory role, string memory department)
         external
         view
-        whenNotPaused
+        onlyAuthorized
         returns (uint256 recommended)
     {
         string memory key = string(abi.encodePacked(role, "|", department));
         SalaryBenchmark storage benchmark = salaryBenchmarks[key];
-        
+
         if (benchmark.midSalary == 0) {
             key = string(abi.encodePacked(role, "|", "General"));
             benchmark = salaryBenchmarks[key];
         }
-        
+
         require(benchmark.midSalary > 0, "No benchmark found");
-        
+
         EmployeePerformance storage perf = employeePerformance[employee];
-        
+
         if (perf.lastUpdated > 0) {
-            uint256 performanceMultiplier = perf.performanceScore * 100 / 100;
-            uint256 baseSalary = benchmark.minSalary + 
+            uint256 performanceMultiplier = perf.performanceScore;
+            uint256 baseSalary = benchmark.minSalary +
                 ((benchmark.maxSalary - benchmark.minSalary) * performanceMultiplier) / 100;
             return baseSalary;
         }
-        
+
         return benchmark.midSalary;
     }
 
-    function addAuthorizedContract(address contract_) external onlyOwner {
-        require(contract_ != address(0), "Invalid address");
-        authorizedHRContracts.push(contract_);
-        emit AuthorizedContractAdded(contract_);
-    }
-
-    function removeAuthorizedContract(address contract_) external onlyOwner {
-        for (uint256 i = 0; i < authorizedHRContracts.length; i++) {
-            if (authorizedHRContracts[i] == contract_) {
-                authorizedHRContracts[i] = authorizedHRContracts[authorizedHRContracts.length - 1];
-                authorizedHRContracts.pop();
-                emit AuthorizedContractRemoved(contract_);
-                return;
-            }
-        }
-    }
-
-    function isAuthorized(address contract_) external view returns (bool) {
-        for (uint256 i = 0; i < authorizedHRContracts.length; i++) {
-            if (authorizedHRContracts[i] == contract_) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    function pause() external onlyOwner {
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _pause();
     }
 
-    function unpause() external onlyOwner {
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
         _unpause();
     }
 }

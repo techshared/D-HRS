@@ -1,0 +1,92 @@
+{
+  "app": {
+    "title": "D-HRS",
+    "subtitle": "Decentralized HR System — Blockchain Audit Trail",
+    "footer": "D-HRS v2.0 · China-Compliant · No Cryptocurrency · On-Chain Audit Trail"
+  },
+  "status": {
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "connecting": "Connecting..."
+  },
+  "tabs": {
+    "dashboard": "Dashboard",
+    "employees": "Employees",
+    "credentials": "Credentials",
+    "payroll": "Payroll",
+    "governance": "Governance"
+  },
+  "login": {
+    "login": "Login",
+    "logout": "Logout"
+  },
+  "wallet": {
+    "connect": "Connect Wallet",
+    "disconnect": "Disconnect",
+    "noWallet": "Please install MetaMask!",
+    "connectFailed": "Failed to connect wallet"
+  },
+  "dashboard": {
+    "title": "System Overview",
+    "totalEmployees": "Total Employees",
+    "activeEmployees": "Active Employees",
+    "departments": "Departments",
+    "payrollStatus": "Payroll Status",
+    "active": "Active",
+    "contracts": "Deployed Contracts",
+    "contractNote": "Contract addresses are displayed after blockchain deployment."
+  },
+  "employees": {
+    "title": "Employee Management",
+    "add": "+ Add Employee",
+    "did": "DID",
+    "role": "Role",
+    "department": "Department",
+    "salary": "Salary",
+    "status": "Status",
+    "actions": "Actions",
+    "view": "View",
+    "loading": "Loading employees...",
+    "noData": "No data",
+    "empty": "No employees found"
+  },
+  "credentials": {
+    "title": "Verifiable Credentials",
+    "issue": "Issue Credential",
+    "verify": "Verify Credential",
+    "empty": "No credentials issued yet"
+  },
+  "payroll": {
+    "title": "Payroll Management",
+    "create": "Create Payroll Run",
+    "history": "View History",
+    "currentPeriod": "Current Period",
+    "totalAmount": "Total Amount",
+    "status": "Status",
+    "processing": "Processing",
+    "runTitle": "Run",
+    "period": "Period",
+    "empty": "No payroll runs yet",
+    "approvals": "Approvals"
+  },
+  "governance": {
+    "title": "HR Governance",
+    "create": "Create Proposal",
+    "for": "For:",
+    "against": "Against:",
+    "abstain": "Abstain:",
+    "vote": "Vote",
+    "voteFor": "Vote For",
+    "voteAgainst": "Vote Against",
+    "promptTitle": "Enter proposal title",
+    "promptDesc": "Enter proposal description",
+    "empty": "No active proposals",
+    "loginRequired": "Please login to create proposals"
+  },
+  "error": {
+    "loadEmployees": "Failed to load employees",
+    "loginFailed": "Login failed. Please try again.",
+    "createProposal": "Failed to create proposal",
+    "vote": "Failed to cast vote"
+  }
+}

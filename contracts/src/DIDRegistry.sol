@@ -2,8 +2,11 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 
-contract DIDRegistry is AccessControlUpgradeable {
+contract DIDRegistry is AccessControlUpgradeable, PausableUpgradeable {
+    bytes32 public constant DID_ADMIN_ROLE = keccak256("DID_ADMIN_ROLE");
+
     struct DIDDocument {
         bytes32 did;
         string controller;
@@ -19,10 +22,14 @@ contract DIDRegistry is AccessControlUpgradeable {
     event DIDCreated(bytes32 indexed did, string controller);
     event DIDUpdated(bytes32 indexed did);
     event DIDDeleted(bytes32 indexed did);
+    event DIDPaused();
+    event DIDUnpaused();
 
     function initialize() public initializer {
         __AccessControl_init();
+        __Pausable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DID_ADMIN_ROLE, msg.sender);
     }
 
     function createDID(
@@ -30,7 +37,7 @@ contract DIDRegistry is AccessControlUpgradeable {
         string calldata _controller,
         string calldata _publicKey,
         string calldata _serviceEndpoint
-    ) external {
+    ) external onlyRole(DID_ADMIN_ROLE) whenNotPaused {
         require(documents[_did].created == 0, "DID exists");
         
         documents[_did] = DIDDocument({
@@ -49,7 +56,7 @@ contract DIDRegistry is AccessControlUpgradeable {
         bytes32 _did,
         string calldata _publicKey,
         string calldata _serviceEndpoint
-    ) external {
+    ) external onlyRole(DID_ADMIN_ROLE) whenNotPaused {
         require(documents[_did].created > 0, "DID not found");
         
         documents[_did].publicKey = _publicKey;
@@ -59,7 +66,7 @@ contract DIDRegistry is AccessControlUpgradeable {
         emit DIDUpdated(_did);
     }
 
-    function deleteDID(bytes32 _did) external {
+    function deleteDID(bytes32 _did) external onlyRole(DID_ADMIN_ROLE) whenNotPaused {
         require(documents[_did].created > 0, "DID not found");
         delete documents[_did];
         emit DIDDeleted(_did);
@@ -76,7 +83,7 @@ contract DIDRegistry is AccessControlUpgradeable {
     function addAuthentication(
         bytes32 _did,
         bytes32 _authenticationId
-    ) external {
+    ) external onlyRole(DID_ADMIN_ROLE) whenNotPaused {
         require(documents[_did].created > 0, "DID not found");
         authentications[_did][_authenticationId] = true;
     }
@@ -86,5 +93,15 @@ contract DIDRegistry is AccessControlUpgradeable {
         bytes32 _authenticationId
     ) external view returns (bool) {
         return authentications[_did][_authenticationId];
+    }
+
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+        emit DIDPaused();
+    }
+
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+        emit DIDUnpaused();
     }
 }

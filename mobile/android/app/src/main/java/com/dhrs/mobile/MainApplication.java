@@ -24,7 +24,7 @@ public class MainApplication extends Application implements ReactApplication {
     new ReactNativeHostWrapper(this, new DefaultReactNativeHost(this) {
       @Override
       public boolean getUseDeveloperSupport() {
-        return BuildConfig.DEBUG;
+        return false;
       }
 
       @Override
@@ -67,9 +67,6 @@ public class MainApplication extends Application implements ReactApplication {
     if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
       // If you opted-in for the New Architecture, we load the native entry point for this app.
       DefaultNewArchitectureEntryPoint.load();
-    }
-    if (BuildConfig.DEBUG) {
-      ReactNativeFlipper.initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
     }
     ApplicationLifecycleDispatcher.onApplicationCreate(this);
   }

@@ -4,12 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D-HRS v2.0 - Decentralized HR System</title>
-    <script type="module">
-        import { createWalletClient, createPublicClient, http, custom } from 'https://esm.sh/viem';
-        import { WalletConnectConnector } from 'https://esm.sh/@wagmi/connectors@^2.0.0';
-        window.viem = { createWalletClient, createPublicClient, http, custom };
-        window.WalletConnectConnector = WalletConnectConnector;
-    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -369,22 +363,25 @@
             </div>
             <div class="nav-links">
                 <button class="nav-btn active" onclick="showSection('dashboard', this)">
-                    <span class="nav-icon">📊</span> Dashboard
+                    <span class="nav-icon">📊</span> <span class="nav-text">{t('tabs.dashboard')}</span>
                 </button>
                 <button class="nav-btn" onclick="showSection('employees', this)">
-                    <span class="nav-icon">👥</span> Employees
+                    <span class="nav-icon">👥</span> <span class="nav-text">{t('tabs.employees')}</span>
                 </button>
                 <button class="nav-btn" onclick="showSection('credentials', this)">
-                    <span class="nav-icon">🎓</span> Credentials
+                    <span class="nav-icon">🎓</span> <span class="nav-text">{t('tabs.credentials')}</span>
                 </button>
                 <button class="nav-btn" onclick="showSection('payroll', this)">
-                    <span class="nav-icon">💰</span> Payroll
+                    <span class="nav-icon">💰</span> <span class="nav-text">{t('tabs.payroll')}</span>
                 </button>
                 <button class="nav-btn" onclick="showSection('governance', this)">
-                    <span class="nav-icon">⚖️</span> Governance
+                    <span class="nav-icon">⚖️</span> <span class="nav-text">{t('tabs.governance')}</span>
                 </button>
                 <button class="nav-btn" onclick="showSection('contracts', this)">
-                    <span class="nav-icon">📝</span> Contracts
+                    <span class="nav-icon">📝</span> <span class="nav-text">{t('tabs.contracts')}</span>
+                </button>
+                <button class="nav-btn" onclick="showSection('compliance', this)">
+                    <span class="nav-icon">🛡️</span> <span class="nav-text">{t('tabs.compliance')}</span>
                 </button>
             </div>
         </nav>
@@ -402,7 +399,11 @@
                         <span class="status-dot disconnected" id="status-dot"></span>
                         <span id="status-text">Disconnected</span>
                     </div>
-                    <button class="btn" id="wallet-btn" onclick="showWalletModal()">Connect Wallet</button>
+                    <button class="btn btn-secondary" id="login-btn" onclick="handleLogin()" style="padding:6px 12px;font-size:0.8rem;">{t('login.login')}</button>
+                    <button class="btn btn-secondary" id="logout-btn" onclick="handleLogout()" style="padding:6px 12px;font-size:0.8rem;display:none;">{t('login.logout')}</button>
+                    <button class="btn btn-secondary lang-toggle" onclick="setLang(currentLang === 'en' ? 'zh' : 'en')">
+                        <span class="nav-text" data-i18n="lang">{t('langLabel')}</span>
+                    </button>
                 </div>
             </div>
 
@@ -445,7 +446,7 @@
                             </tr>
                         </thead>
                         <tbody id="activity-log">
-                            <tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:2rem;">Connect wallet to view activity</td></tr>
+                            <tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:2rem;">No recent activity</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -525,7 +526,7 @@
                 </div>
                 <div id="create-payroll-form" class="card" style="display: none; margin-bottom: 1.5rem;">
                     <div class="form-group"><label class="form-label">Period</label><input type="text" id="payroll-period" class="form-input" placeholder="Jan 2026"></div>
-                    <div class="form-group"><label class="form-label">Amount (HR Tokens)</label><input type="number" id="payroll-amount" class="form-input" placeholder="21000"></div>
+                    <div class="form-group"><label class="form-label">Amount (CNY)</label><input type="number" id="payroll-amount" class="form-input" placeholder="21000"></div>
                     <button class="btn" onclick="createPayroll()" id="payroll-btn">Execute</button>
                 </div>
                 <div class="bento-grid">
@@ -571,44 +572,238 @@
                 </div>
             </div>
 
+            <!-- Compliance Section -->
+            <div id="compliance" class="section">
+                <div class="section-header">
+                    <h2>合规面板 / Compliance Dashboard</h2>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:2rem;">
+                    <div class="stat-card">
+                        <div class="stat-label">实名认证用户</div>
+                        <div class="stat-value" id="comp-total-users">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">增强级 (ENHANCED)</div>
+                        <div class="stat-value" id="comp-enhanced">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">基础级 (BASIC)</div>
+                        <div class="stat-value" id="comp-basic">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">已过期</div>
+                        <div class="stat-value" id="comp-expired" style="color:var(--danger);">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">制裁名单地址</div>
+                        <div class="stat-value" id="comp-sanctions">-</div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:300px; background:var(--bg-surface); border-radius:var(--radius-lg); padding:1.5rem;">
+                        <h3 style="margin-bottom:1rem;">实名认证 / Real Name KYC</h3>
+                        <input type="text" id="kyc-address" placeholder="钱包地址" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; font-family:monospace;" />
+                        <input type="text" id="kyc-id-number" placeholder="身份证号" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px;" />
+                        <button class="btn" onclick="initiateKYC()">提交认证</button>
+                        <div id="kyc-result" style="margin-top:8px; font-size:0.875rem;"></div>
+                    </div>
+                    <div style="flex:1; min-width:300px; background:var(--bg-surface); border-radius:var(--radius-lg); padding:1.5rem;">
+                        <h3 style="margin-bottom:1rem;">制裁名单查询 / Sanctions Check</h3>
+                        <input type="text" id="sanctions-address" placeholder="输入地址查询" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; font-family:monospace;" />
+                        <button class="btn" onclick="checkSanctions()">查询</button>
+                        <div id="sanctions-result" style="margin-top:8px; font-size:0.875rem;"></div>
+                    </div>
+                </div>
+            </div>
+
             <footer style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--text-tertiary); font-size: 0.75rem; text-align: center;">
-                D-HRS v2.0 | Powered by Ethereum & Layer 2
+                D-HRS v2.0 | 链聘通
             </footer>
         </main>
     </div>
 
-    <!-- Wallet Selection Modal -->
-    <div id="wallet-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center;">
-        <div style="background:var(--bg-surface); border-radius:var(--radius-lg); padding:2rem; max-width:400px; width:90%; box-shadow:var(--shadow-lg);">
-            <h3 style="font-size:1.25rem; font-weight:700; margin-bottom:1.5rem;">Connect Wallet</h3>
-            <div style="display:flex; flex-direction:column; gap:12px;">
-                <button class="btn btn-secondary" onclick="connectBrowserWallet()" style="justify-content:flex-start; padding:16px; font-size:1rem;">
-                    <span style="font-size:1.5rem; margin-right:12px;">🦊</span>
-                    <div style="text-align:left;">
-                        <div style="font-weight:600;">Browser Wallet</div>
-                        <div style="font-size:0.8rem; color:var(--text-secondary);">MetaMask, Rabby, Brave Wallet</div>
-                    </div>
-                </button>
-                <button class="btn btn-secondary" onclick="connectWalletConnect()" style="justify-content:flex-start; padding:16px; font-size:1rem;">
-                    <span style="font-size:1.5rem; margin-right:12px;">📱</span>
-                    <div style="text-align:left;">
-                        <div style="font-weight:600;">Mobile Wallet</div>
-                        <div style="font-size:0.8rem; color:var(--text-secondary);">Trust Wallet, Rainbow, MetaMask Mobile</div>
-                    </div>
-                </button>
-            </div>
-            <button class="btn btn-secondary" onclick="closeWalletModal()" style="margin-top:1rem; width:100%;">Cancel</button>
-            <div id="wc-qr-container" style="display:none; margin-top:1rem; text-align:center;">
-                <p style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:12px;">Scan with your mobile wallet</p>
-                <div id="wc-qr-code" style="background:white; padding:16px; border-radius:var(--radius-sm); display:inline-block;"></div>
-            </div>
-        </div>
-    </div>
+
 
     <script>
+        // ========================================
+        // i18n - Simple vanilla JS translations
+        // ========================================
+        const I18N = {
+            en: {
+                app: { title: "D-HRS v2.0", subtitle: "Powered by Ethereum & Layer 2" },
+                status: { connected: "Connected", disconnected: "Disconnected", connecting: "Connecting..." },
+                tabs: { dashboard: "Dashboard", employees: "Employees", payroll: "Payroll", credentials: "Credentials", governance: "Governance", contracts: "Contracts", compliance: "Compliance" },
+                dashboard: { title: "System Overview", totalEmployees: "Total Employees", activeEmployees: "Active Employees", departments: "Departments", payrollStatus: "Payroll Status", active: "Active", contracts: "Deployed Contracts" },
+                employees: { title: "Employee Management", add: "+ Add Employee", did: "DID", role: "Role", department: "Department", salary: "Salary", status: "Status", actions: "Actions", view: "View", loading: "Loading employees...", noData: "No data" },
+                credentials: { title: "Verifiable Credentials", issue: "Issue Credential", verify: "Verify Credential", empty: "No credentials issued yet" },
+                payroll: { title: "Payroll", create: "Create Payroll Run", history: "View History", currentPeriod: "Current Period", totalAmount: "Total Amount", status: "Status", processing: "Processing" },
+                governance: { title: "HR Governance", create: "Create Proposal", for: "For:", against: "Against:", abstain: "Abstain:", vote: "Vote", remoteWork: "Update Remote Work Policy", remoteWorkDesc: "Proposal to allow 4 days remote work per week" },
+            },
+            zh: {
+                app: { title: "链聘通 v2.0", subtitle: "基于以太坊、Layer 2 和 ERC-4337" },
+                status: { connected: "已连接", disconnected: "未连接", connecting: "连接中..." },
+                tabs: { dashboard: "概览", employees: "员工", payroll: "工资", credentials: "凭证", governance: "治理", contracts: "合约", compliance: "合规" },
+                dashboard: { title: "系统概览", totalEmployees: "总员工", activeEmployees: "在职员工", departments: "部门数", payrollStatus: "工资状态", active: "运行中", contracts: "已部署合约" },
+                employees: { title: "员工管理", add: "+ 添加员工", did: "DID", role: "角色", department: "部门", salary: "薪资", status: "状态", actions: "操作", view: "查看", loading: "加载中...", noData: "暂无数据" },
+                credentials: { title: "可验证凭证", issue: "签发凭证", verify: "验证凭证", empty: "暂无已签发凭证" },
+                payroll: { title: "工资管理", create: "创建工资结算", history: "查看历史", currentPeriod: "当前周期", totalAmount: "总金额", status: "状态", processing: "处理中" },
+                governance: { title: "治理", create: "创建提案", for: "赞成：", against: "反对：", abstain: "弃权：", vote: "投票", remoteWork: "更新远程工作政策", remoteWorkDesc: "允许每周远程工作4天的提案" },
+
+            }
+        };
+
+        const LANG_KEY = "dhrs_lang";
+        let currentLang = localStorage.getItem(LANG_KEY) || (navigator.language?.startsWith("zh") ? "zh" : "en");
+
+        function t(path) {
+            const parts = path.split(".");
+            let obj = I18N[currentLang];
+            for (const p of parts) { obj = obj?.[p]; if (!obj) return path; }
+            return obj;
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            localStorage.setItem(LANG_KEY, lang);
+            applyTranslations();
+        }
+
+        function applyTranslations() {
+            document.getElementById("page-title").textContent = t("app.title");
+            document.querySelector(".logo-text span").textContent = t("app.subtitle");
+
+            // Tabs
+            document.querySelectorAll(".nav-btn").forEach(btn => {
+                const section = btn.getAttribute("onclick")?.match(/showSection\('(\w+)'/)?.[1];
+                if (section) btn.childNodes.forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) n.textContent = " " + t("tabs." + section); });
+            });
+
+            // Dashboard
+            document.querySelectorAll(".stat-label").forEach((el, i) => {
+                const labels = [t("dashboard.totalEmployees"), t("dashboard.activeEmployees"), t("dashboard.departments"), t("dashboard.payrollStatus")];
+                if (labels[i]) el.textContent = labels[i];
+            });
+            document.querySelector("h3:nth-of-type(1)") && (document.querySelectorAll(".contracts-section h3")[0].textContent = t("dashboard.contracts"));
+
+            // Employees
+            const empTh = document.querySelectorAll("#employees thead th");
+            if (empTh.length) {
+                empTh[0].textContent = t("employees.did"); empTh[1].textContent = t("employees.role");
+                empTh[2].textContent = t("employees.department"); empTh[3].textContent = t("employees.salary");
+                empTh[4].textContent = t("employees.status"); empTh[5].textContent = t("employees.actions");
+            }
+
+            // Credentials
+            // Payroll
+            // Governance - left as-is since the HTML uses minimal text in JS
+            // Footer
+            document.querySelector(".footer p").textContent = t("app.subtitle") + " | D-HRS v2.0";
+        }
+
+        // Language switcher in header
+        function renderLangSwitcher() {
+            const actions = document.querySelector(".header-actions");
+            if (actions) {
+                const langBtn = document.createElement("button");
+                langBtn.className = "btn btn-secondary lang-toggle";
+                langBtn.textContent = currentLang === "en" ? "中文" : "EN";
+                langBtn.onclick = (e) => { e.stopPropagation(); setLang(currentLang === "en" ? "zh" : "en"); };
+                actions.appendChild(langBtn);
+            }
+        }
+
+        function showSection(id, btn) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(btn) btn.classList.add('active');
+            const title = btn ? (btn.querySelector('.nav-text')?.textContent || btn.textContent.trim()) : 'Dashboard';
+            document.getElementById('page-title').textContent = title;
+        }
+
+        function toggleForm(id) {
+            const el = document.getElementById(id);
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function showAlert(msg, type) {
+            const c = document.getElementById('alert-container');
+            const a = document.createElement('div');
+            a.className = `alert ${type}`;
+            a.innerHTML = type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : 'ℹ️ ';
+            a.textContent += msg;
+            c.appendChild(a);
+            setTimeout(() => a.remove(), 4000);
+        }
+
+        function registerEmployee() {
+            const wallet = document.getElementById('emp-wallet').value.trim();
+            const name = document.getElementById('emp-name').value.trim();
+            const role = document.getElementById('emp-role').value.trim();
+            const dept = document.getElementById('emp-dept').value;
+            const salary = document.getElementById('emp-salary').value;
+            if (!wallet || !name || !role) { showAlert('Please fill required fields', 'error'); return; }
+            fetch(`${API_BASE}/employees`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('dhrs_web_token') || ''}` },
+                body: JSON.stringify({ wallet_address: wallet, did: name, role, department: dept, salary: salary ? Number(salary) : undefined })
+            }).then(r => r.json()).then(d => {
+                if (d.success) { showAlert('Employee registered!', 'success'); loadEmployees(); }
+                else showAlert(d.error || 'Failed', 'error');
+            }).catch(e => showAlert(e.message, 'error'));
+            toggleForm('add-employee-form');
+        }
+
+        function issueCredential() {
+            const recipient = document.getElementById('cred-recipient').value.trim();
+            const type = document.getElementById('cred-type').value;
+            if (!recipient) { showAlert('Recipient address required', 'error'); return; }
+            fetch(`${API_BASE}/credentials/issue`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('dhrs_web_token') || ''}` },
+                body: JSON.stringify({ subject_did: recipient, credential_type: type })
+            }).then(r => r.json()).then(d => {
+                if (d.success) { showAlert('Credential issued!', 'success'); loadCredentials(); }
+                else showAlert(d.error || 'Failed', 'error');
+            }).catch(e => showAlert(e.message, 'error'));
+            toggleForm('issue-credential-form');
+        }
+
+        function createPayroll() {
+            const period = document.getElementById('payroll-period').value.trim();
+            const amount = document.getElementById('payroll-amount').value;
+            if (!period || !amount) { showAlert('Please fill all fields', 'error'); return; }
+            fetch(`${API_BASE}/payroll/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('dhrs_web_token') || ''}` },
+                body: JSON.stringify({ period_start: period, period_end: period, payments: [{ net_amount: Number(amount) }] })
+            }).then(r => r.json()).then(d => {
+                if (d.success) { showAlert('Payroll run created!', 'success'); loadPayroll(); }
+                else showAlert(d.error || 'Failed', 'error');
+            }).catch(e => showAlert(e.message, 'error'));
+            toggleForm('create-payroll-form');
+        }
+
+        function createProposal() {
+            const title = document.getElementById('proposal-title').value.trim();
+            const desc = document.getElementById('proposal-desc').value.trim();
+            if (!title || !desc) { showAlert('Please fill all fields', 'error'); return; }
+            fetch(`${API_BASE}/governance/proposals`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('dhrs_web_token') || ''}` },
+                body: JSON.stringify({ title, description: desc })
+            }).then(r => r.json()).then(d => {
+                if (d.success) { showAlert('Proposal submitted!', 'success'); loadProposals(); }
+                else showAlert(d.error || 'Failed', 'error');
+            }).catch(e => showAlert(e.message, 'error'));
+            toggleForm('create-proposal-form');
+        }
+
+        // ═══ Compliance Dashboard ═══
+
+        const API_BASE_CONST = "http://127.0.0.1:3001/api/v1";
         const CONFIG = {
             contracts: {
-                HRToken: "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
                 EmployeeRegistry: "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
                 CredentialRegistry: "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
                 PayrollExecutor: "0x68B1D87F95878fE05B998F19b66F4baba5De1aed",
@@ -622,166 +817,225 @@
             }
         };
 
-        let walletClient = null, publicClient = null, account = null, chainId = null;
-        let walletConnector = null; // For WalletConnect
+        let employees = [];
+        let proposals = [];
+        let payrollRuns = [];
 
-        window.addEventListener('load', async () => {
-            // Check for existing browser wallet connection
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                    if (accounts.length > 0) {
-                        await connectWithBrowserWallet(accounts);
-                    }
-                } catch (e) {}
-            }
-        });
-
-        function showSection(id, btn) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            if(btn) btn.classList.add('active');
-            document.getElementById('page-title').textContent = btn ? btn.textContent.trim() : 'Dashboard';
+        async function loadEmployees() {
+            try {
+                const res = await fetch(`${API_BASE}/employees`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('dhrs_web_token') || ''}` }
+                });
+                const d = await res.json();
+                if (d.success) {
+                    employees = d.data.employees || [];
+                    renderEmployees();
+                    updateDashboardStats();
+                }
+            } catch(e) { console.error(e); }
         }
 
-        function toggleForm(id) {
-            const el = document.getElementById(id);
-            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        function renderEmployees() {
+            const tbody = document.getElementById('employee-table');
+            if (!tbody) return;
+            tbody.innerHTML = employees.map(emp =>
+                `<tr>
+                    <td style="font-family:monospace;font-size:0.8rem">${emp.did}</td>
+                    <td>${emp.role || '-'}</td>
+                    <td>${emp.department || '-'}</td>
+                    <td>${emp.status || '-'}</td>
+                </tr>`
+            ).join('');
         }
 
-        function showWalletModal() {
-            document.getElementById('wallet-modal').style.display = 'flex';
+        async function loadCredentials() {
+            // Placeholder - credentials tab loads on-demand
         }
 
-        function closeWalletModal() {
-            document.getElementById('wallet-modal').style.display = 'none';
-            document.getElementById('wc-qr-container').style.display = 'none';
+        async function loadPayroll() {
+            try {
+                const res = await fetch(`${API_BASE}/payroll/history`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('dhrs_web_token') || ''}` }
+                });
+                const d = await res.json();
+                if (d.success) {
+                    payrollRuns = d.data.payroll_runs || [];
+                    updatePayrollUI();
+                }
+            } catch(e) { console.error(e); }
         }
 
-        async function connectBrowserWallet() {
-            closeWalletModal();
-            if (typeof window.ethereum === 'undefined') {
-                showAlert('No browser wallet found. Please install MetaMask or Rabby.', 'error');
+        function updatePayrollUI() {
+            // Payroll table handled via DOM below
+        }
+
+        async function loadProposals() {
+            try {
+                const res = await fetch(`${API_BASE}/governance/proposals`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('dhrs_web_token') || ''}` }
+                });
+                const d = await res.json();
+                if (d.success) {
+                    proposals = d.data.proposals || [];
+                    renderProposals();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function renderProposals() {
+            const list = document.getElementById('proposals-list');
+            if (!list) return;
+            if (proposals.length === 0) {
+                list.innerHTML = '<div class="card" style="text-align:center;color:var(--text-secondary);">No active proposals</div>';
                 return;
             }
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                await connectWithBrowserWallet(accounts);
-            } catch (e) {
-                showAlert('Connection failed: ' + e.message, 'error');
-            }
+            list.innerHTML = proposals.map(p =>
+                `<div class="card" style="margin-bottom:1rem;">
+                    <h3 style="font-size:1rem;margin-bottom:0.5rem">${p.title}</h3>
+                    <p style="color:var(--text-secondary);margin-bottom:0.5rem">${p.description}</p>
+                    <div style="display:flex;gap:1rem;font-size:0.875rem;">
+                        <span class="vote for">${t('governance.for')} ${p.for_votes || 0}</span>
+                        <span class="vote against">${t('governance.against')} ${p.against_votes || 0}</span>
+                        <span class="vote abstain">${t('governance.abstain')} ${p.abstain_votes || 0}</span>
+                    </div>
+                    ${localStorage.getItem('dhrs_web_token') ? `<div class="proposal-actions" style="margin-top:0.5rem">
+                        <button class="vote-btn" onclick="handleVote(${p.id}, true)">${t('governance.voteFor')}</button>
+                        <button class="vote-btn against" onclick="handleVote(${p.id}, false)">${t('governance.voteAgainst')}</button>
+                    </div>` : ''}
+                </div>`
+            ).join('');
         }
 
-        async function connectWithBrowserWallet(accounts) {
+        async function handleVote(proposalId, support) {
             try {
-                document.getElementById('status-dot').className = 'status-dot connecting';
-                document.getElementById('status-text').textContent = 'Connecting...';
-
-                account = accounts[0];
-                chainId = parseInt(await window.ethereum.request({ method: 'eth_chainId' }), 16);
-
-                const { createWalletClient, createPublicClient, http } = window.viem;
-                walletClient = createWalletClient({ account, chain: getViemChain(chainId), transport: http() });
-                publicClient = createPublicClient({ chain: getViemChain(chainId), transport: http() });
-
-                updateConnectedState();
-                showAlert('Wallet connected successfully', 'success');
-            } catch (e) {
-                document.getElementById('status-dot').className = 'status-dot disconnected';
-                document.getElementById('status-text').textContent = 'Disconnected';
-                showAlert('Connection failed', 'error');
-            }
-        }
-
-        async function connectWalletConnect() {
-            closeWalletModal();
-            try {
-                document.getElementById('status-dot').className = 'status-dot connecting';
-                document.getElementById('status-text').textContent = 'Connecting...';
-
-                // Initialize WalletConnect
-                const { WalletConnectConnector } = window.WalletConnectConnector;
-                walletConnector = new WalletConnectConnector({
-                    projectId: 'YOUR_WALLETCONNECT_PROJECT_ID', // Get from https://cloud.walletconnect.com
-                    chains: [31337], // Hardhat local chain
-                    showQrModal: true, // Show QR code modal
-                    qrModalOptions: {
-                        themeMode: 'light'
-                    }
+                const res = await fetch(`${API_BASE}/governance/proposals/${proposalId}/vote`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('dhrs_web_token') || ''}` },
+                    body: JSON.stringify({ support, weight: 1 })
                 });
+                const d = await res.json();
+                if (!d.success) showAlert(d.error || 'Vote failed', 'error');
+                else loadProposals();
+            } catch(e) { showAlert(e.message, 'error'); }
+        }
 
-                // Connect and get accounts
-                const accounts = await walletConnector.getAccounts();
-                if (accounts.length === 0) {
-                    throw new Error('No accounts found');
+        function updateDashboardStats() {
+            document.getElementById('total-employees').textContent = employees.length || 0;
+            const active = employees.filter(e => e.status === 1 || e.status === 'active').length;
+            const depts = new Set(employees.map(e => e.department).filter(Boolean));
+            document.getElementById('active-employees').textContent = active;
+            document.getElementById('departments').textContent = depts.size || 0;
+        }
+
+        async function handleLogin() {
+            try {
+                const challengeRes = await fetch(`${API_BASE}/auth/challenge`);
+                const challengeData = await challengeRes.json();
+                if (!challengeData.success) { showAlert(t('error.loginFailed'), 'error'); return; }
+                const loginRes = await fetch(`${API_BASE}/auth/connect`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wallet_address: 'local_user' })
+                });
+                const loginData = await loginRes.json();
+                if (loginData.success) {
+                    localStorage.setItem('dhrs_web_token', loginData.data.token);
+                    document.getElementById('login-btn').style.display = 'none';
+                    document.getElementById('logout-btn').style.display = '';
+                    loadEmployees(); loadProposals(); loadPayroll();
                 }
+            } catch(e) { showAlert(t('error.loginFailed'), 'error'); }
+        }
 
-                account = accounts[0];
-                chainId = 31337; // Hardhat
+        function handleLogout() {
+            localStorage.removeItem('dhrs_web_token');
+            document.getElementById('login-btn').style.display = '';
+            document.getElementById('logout-btn').style.display = 'none';
+            employees = []; proposals = []; payrollRuns = [];
+            renderEmployees(); renderProposals();
+        }
 
-                const { createWalletClient, createPublicClient, custom } = window.viem;
-                walletClient = createWalletClient({
-                    account,
-                    chain: getViemChain(chainId),
-                    transport: custom(walletConnector)
-                });
-                publicClient = createPublicClient({
-                    chain: getViemChain(chainId),
-                    transport: custom(walletConnector)
-                });
+        const COMPLIANCE_API = 'http://127.0.0.1:3001/api/v1/compliance';
 
-                updateConnectedState();
-                showAlert('Mobile wallet connected successfully', 'success');
+        async function loadComplianceDashboard() {
+            try {
+                const res = await fetch(`${COMPLIANCE_API}/dashboard`);
+                const json = await res.json();
+                if (!json.success) throw new Error('API error');
+
+                const d = json.data;
+                document.getElementById('comp-total-users').textContent = d.totalUsers || 0;
+                document.getElementById('comp-enhanced').textContent = d.kycStats?.ENHANCED || 0;
+                document.getElementById('comp-basic').textContent = d.kycStats?.BASIC || 0;
+                document.getElementById('comp-expired').textContent = d.kycStats?.EXPIRED || 0;
+                document.getElementById('comp-sanctions').textContent = d.sanctions?.totalAddresses || 0;
             } catch (e) {
-                console.error(e);
-                document.getElementById('status-dot').className = 'status-dot disconnected';
-                document.getElementById('status-text').textContent = 'Disconnected';
-                showAlert('WalletConnect failed: ' + e.message, 'error');
+                document.getElementById('comp-total-users').textContent = '⚠️';
             }
         }
 
-        function updateConnectedState() {
-            document.getElementById('status-dot').className = 'status-dot connected';
-            document.getElementById('status-text').textContent = 'Connected';
-            document.getElementById('wallet-btn').textContent = shortenAddress(account);
+        async function initiateKYC() {
+            const address = document.getElementById('kyc-address').value.trim();
+            const idNumber = document.getElementById('kyc-id-number').value.trim();
+            const resultEl = document.getElementById('kyc-result');
 
-            const net = CONFIG.networks[chainId] || { name: `Chain ${chainId}`, type: 'unknown' };
-            const badge = document.getElementById('network-badge');
-            badge.textContent = net.name;
-            badge.className = `network-badge ${net.type}`;
+            if (!idNumber) {
+                resultEl.innerHTML = '<span style="color:var(--danger);">请输入身份证号</span>';
+                return;
+            }
 
-            document.getElementById('info-chain-id').textContent = chainId;
-            document.getElementById('info-network-name').textContent = net.name;
-
-            // Enable buttons
-            document.querySelectorAll('.btn').forEach(b => b.disabled = false);
+            resultEl.innerHTML = '<span style="color:var(--text-secondary);">处理中...</span>';
+            try {
+                const res = await fetch(`${COMPLIANCE_API}/kyc/initiate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ wallet_address: address || 'web_' + Date.now(), id_number: idNumber })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    resultEl.innerHTML = '<span style="color:var(--success);">✅ 实名认证通过</span>';
+                    loadComplianceDashboard();
+                } else {
+                    resultEl.innerHTML = `<span style="color:var(--danger);">❌ ${json.reason}</span>`;
+                }
+            } catch (e) {
+                resultEl.innerHTML = `<span style="color:var(--danger);">❌ 连接失败: ${e.message}</span>`;
+            }
         }
 
-        function getViemChain(id) {
-            const chains = {
-                31337: { id: 31337, name: 'Hardhat', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['http://127.0.0.1:8545'] } } },
-                11155111: { id: 11155111, name: 'Sepolia', nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://sepolia.infura.io/v3/YOUR_KEY'] } } }
-            };
-            return chains[id] || chains[31337];
+        async function checkSanctions() {
+            const address = document.getElementById('sanctions-address').value.trim();
+            const resultEl = document.getElementById('sanctions-result');
+
+            if (!address) {
+                resultEl.innerHTML = '<span style="color:var(--text-secondary);">请输入地址</span>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${COMPLIANCE_API}/sanctions/check`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address })
+                });
+                const json = await res.json();
+                if (json.data?.blocked) {
+                    resultEl.innerHTML = '<span style="color:var(--danger);">🚫 该地址在制裁名单中</span>';
+                } else {
+                    resultEl.innerHTML = '<span style="color:var(--success);">✅ 地址正常</span>';
+                }
+            } catch (e) {
+                resultEl.innerHTML = `<span style="color:var(--danger);">❌ 查询失败</span>`;
+            }
         }
 
-        function showAlert(msg, type) {
-            const c = document.getElementById('alert-container');
-            const a = document.createElement('div');
-            a.className = `alert ${type}`;
-            a.innerHTML = type === 'success' ? '✅ ' : type === 'error' ? '❌ ' : 'ℹ️ ';
-            a.textContent += msg;
-            c.appendChild(a);
-            setTimeout(() => a.remove(), 4000);
-        }
-
-        function shortenAddress(a) { return a ? a.slice(0,6) + '...' + a.slice(-4) : ''; }
-
-        function registerEmployee() { showAlert('Transaction submitted!', 'info'); toggleForm('add-employee-form'); }
-        function issueCredential() { showAlert('Credential issued!', 'success'); toggleForm('issue-credential-form'); }
-        function createPayroll() { showAlert('Payroll executed!', 'success'); toggleForm('create-payroll-form'); }
-        function createProposal() { showAlert('Proposal submitted!', 'success'); toggleForm('create-proposal-form'); }
+        // Auto-load compliance dashboard when section becomes visible
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.nav-btn');
+            if (btn && btn.textContent.includes('Compliance') || btn?.textContent.includes('合规')) {
+                setTimeout(loadComplianceDashboard, 200);
+            }
+        });
     </script>
 </body>
 </html>

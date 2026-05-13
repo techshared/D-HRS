@@ -2,7 +2,7 @@ const hre = require("hardhat");
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
-  
+
   console.log("Deploying contracts with account:", deployer.address);
 
   const getAddress = async (contract) => {
@@ -10,29 +10,27 @@ async function main() {
     return await contract.getAddress();
   };
 
-  // Deploy HR Token
-  const HRToken = await hre.ethers.getContractFactory("HRToken");
-  const hrToken = await HRToken.deploy();
-  const hrTokenAddress = await getAddress(hrToken);
-  console.log("HRToken deployed to:", hrTokenAddress);
+  // Deploy Compliance Engine
+  const ComplianceEngine = await hre.ethers.getContractFactory("ComplianceEngine");
+  const complianceEngine = await ComplianceEngine.deploy();
+  const complianceEngineAddress = await getAddress(complianceEngine);
+  console.log("ComplianceEngine deployed to:", complianceEngineAddress);
 
-  // Deploy Employee Registry
+  // Deploy Employee Registry (with ComplianceEngine address)
   const EmployeeRegistry = await hre.ethers.getContractFactory("EmployeeRegistry");
-  const employeeRegistry = await EmployeeRegistry.deploy();
+  const employeeRegistry = await EmployeeRegistry.deploy(complianceEngineAddress);
   const employeeRegistryAddress = await getAddress(employeeRegistry);
   console.log("EmployeeRegistry deployed to:", employeeRegistryAddress);
+
+  // Set ComplianceEngine in EmployeeRegistry
+  await employeeRegistry.setComplianceEngine(complianceEngineAddress);
+  console.log("ComplianceEngine linked to EmployeeRegistry");
 
   // Deploy Credential Registry
   const CredentialRegistry = await hre.ethers.getContractFactory("CredentialRegistry");
   const credentialRegistry = await CredentialRegistry.deploy();
   const credentialRegistryAddress = await getAddress(credentialRegistry);
   console.log("CredentialRegistry deployed to:", credentialRegistryAddress);
-
-  // Deploy Payroll Executor
-  const PayrollExecutor = await hre.ethers.getContractFactory("PayrollExecutor");
-  const payrollExecutor = await PayrollExecutor.deploy(hrTokenAddress);
-  const payrollExecutorAddress = await getAddress(payrollExecutor);
-  console.log("PayrollExecutor deployed to:", payrollExecutorAddress);
 
   // Deploy Benefits NFT
   const BenefitsNFT = await hre.ethers.getContractFactory("BenefitsNFT");
@@ -46,7 +44,7 @@ async function main() {
   const hrGovernanceAddress = await getAddress(hrGovernance);
   console.log("HRGovernance deployed to:", hrGovernanceAddress);
 
-  // Deploy DID Registry
+  // Deploy DID Registry (upgradeable - needs initialize)
   const DIDRegistry = await hre.ethers.getContractFactory("DIDRegistry");
   const didRegistry = await DIDRegistry.deploy();
   const didRegistryAddress = await getAddress(didRegistry);
@@ -59,10 +57,9 @@ async function main() {
   console.log("DecentralizedHRS deployed to:", decentralizedHRSAddress);
 
   console.log("\n=== Deployment Summary ===");
-  console.log("HRToken:", hrTokenAddress);
+  console.log("ComplianceEngine:", complianceEngineAddress);
   console.log("EmployeeRegistry:", employeeRegistryAddress);
   console.log("CredentialRegistry:", credentialRegistryAddress);
-  console.log("PayrollExecutor:", payrollExecutorAddress);
   console.log("BenefitsNFT:", benefitsNFTAddress);
   console.log("HRGovernance:", hrGovernanceAddress);
   console.log("DIDRegistry:", didRegistryAddress);
@@ -71,12 +68,11 @@ async function main() {
   const fs = require("fs");
   const networkName = hre.network.name;
   const chainId = hre.network.config.chainId || 31337;
-  
+
   const deploymentAddresses = {
-    HRToken: hrTokenAddress,
+    ComplianceEngine: complianceEngineAddress,
     EmployeeRegistry: employeeRegistryAddress,
     CredentialRegistry: credentialRegistryAddress,
-    PayrollExecutor: payrollExecutorAddress,
     BenefitsNFT: benefitsNFTAddress,
     HRGovernance: hrGovernanceAddress,
     DIDRegistry: didRegistryAddress,
@@ -85,7 +81,7 @@ async function main() {
     network: networkName,
     deployedAt: new Date().toISOString()
   };
-  
+
   fs.writeFileSync(
     "./deployment-addresses.json",
     JSON.stringify(deploymentAddresses, null, 2)

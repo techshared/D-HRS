@@ -2,21 +2,27 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("D-HRS Contracts", function () {
-  let employeeRegistry, credentialRegistry, hrToken, benefitsNFT, hrGovernance, didRegistry, decentralizedHRS;
+  let employeeRegistry, credentialRegistry, benefitsNFT, hrGovernance, didRegistry, decentralizedHRS, complianceEngine;
   let owner, hrAdmin, manager, employee, employee2;
 
   before(async function () {
     [owner, hrAdmin, manager, employee, employee2] = await ethers.getSigners();
 
-    // Deploy HR Token
-    const HRToken = await ethers.getContractFactory("HRToken");
-    hrToken = await HRToken.deploy();
-    console.log("HRToken deployed to:", hrToken.address);
+    // Deploy Compliance Engine
+    const ComplianceEngine = await ethers.getContractFactory("ComplianceEngine");
+    complianceEngine = await ComplianceEngine.deploy();
+    console.log("ComplianceEngine deployed to:", complianceEngine.address);
 
-    // Deploy Employee Registry
+    // Deploy Employee Registry (with ComplianceEngine address)
     const EmployeeRegistry = await ethers.getContractFactory("EmployeeRegistry");
-    employeeRegistry = await EmployeeRegistry.deploy();
+    employeeRegistry = await EmployeeRegistry.deploy(complianceEngine.target);
     console.log("EmployeeRegistry deployed to:", employeeRegistry.address);
+
+    // Grant HR_ADMIN_ROLE on EmployeeRegistry
+    await employeeRegistry.grantRole(await employeeRegistry.HR_ADMIN_ROLE(), hrAdmin.address);
+
+    // Set ComplianceEngine in EmployeeRegistry
+    await employeeRegistry.setComplianceEngine(complianceEngine.target);
 
     // Deploy Credential Registry
     const CredentialRegistry = await ethers.getContractFactory("CredentialRegistry");
@@ -33,10 +39,14 @@ describe("D-HRS Contracts", function () {
     hrGovernance = await HRGovernance.deploy();
     console.log("HRGovernance deployed to:", hrGovernance.address);
 
-    // Deploy DID Registry
+    // Deploy DID Registry (upgradeable - needs initialize)
     const DIDRegistry = await ethers.getContractFactory("DIDRegistry");
     didRegistry = await DIDRegistry.deploy();
+    await didRegistry.initialize();
     console.log("DIDRegistry deployed to:", didRegistry.address);
+
+    // Grant DID_ADMIN_ROLE for DIDRegistry
+    await didRegistry.grantRole(await didRegistry.DID_ADMIN_ROLE(), owner.address);
 
     // Deploy DecentralizedHRS
     const DecentralizedHRS = await ethers.getContractFactory("DecentralizedHRS");
@@ -48,15 +58,17 @@ describe("D-HRS Contracts", function () {
     await decentralizedHRS.grantRole(await decentralizedHRS.EVALUATOR_ROLE(), hrAdmin.address);
     await decentralizedHRS.grantRole(await decentralizedHRS.DEPARTMENT_HEAD_ROLE(), hrAdmin.address);
 
-    // Grant HR Admin role
-    await employeeRegistry.grantRole(await employeeRegistry.HR_ADMIN_ROLE(), hrAdmin.address);
-    
     // Grant roles for governance
     await hrGovernance.grantRole(await hrGovernance.PROPOSER_ROLE(), hrAdmin.address);
     await hrGovernance.grantRole(await hrGovernance.VOTER_ROLE(), hrAdmin.address);
-    
+
     // Grant roles for benefits NFT
     await benefitsNFT.grantRole(await benefitsNFT.MINTER_ROLE(), hrAdmin.address);
+
+    // Register hrAdmin in ComplianceEngine (ENHANCED level, valid for 365 days)
+    const RealNameLevel = { NONE: 0, BASIC: 1, ENHANCED: 2 };
+    await complianceEngine.updateRealName(hrAdmin.address, RealNameLevel.ENHANCED, 365, "0xhradmin_hash");
+    console.log("hrAdmin registered in ComplianceEngine with ENHANCED level");
   });
 
   describe("EmployeeRegistry", function () {
@@ -68,8 +80,7 @@ describe("D-HRS Contracts", function () {
         testDID,
         "0xhash123",
         "Software Engineer",
-        "Engineering",
-        100000
+        "Engineering"
       );
 
       const emp = await employeeRegistry.getEmployee(testDID);
@@ -82,13 +93,11 @@ describe("D-HRS Contracts", function () {
       await employeeRegistry.connect(hrAdmin).updateEmployee(
         testDID,
         "Senior Engineer",
-        "Engineering",
-        120000
+        "Engineering"
       );
 
       const emp = await employeeRegistry.getEmployee(testDID);
       expect(emp.role).to.equal("Senior Engineer");
-      expect(emp.salary).to.equal(120000);
       console.log("✓ Employee updated successfully");
     });
 
@@ -103,13 +112,17 @@ describe("D-HRS Contracts", function () {
     it("Should register multiple employees", async function () {
       const testDID2 = ethers.keccak256(ethers.toUtf8Bytes("did:hrs:test:002"));
 
+      // Advance time to avoid rate limit
+      const block = await ethers.provider.getBlock("latest");
+      await hre.network.provider.send("evm_setNextBlockTimestamp", [block.timestamp + 61]);
+      await hre.network.provider.send("evm_mine", []);
+
       await employeeRegistry.connect(hrAdmin).registerEmployee(
         employee2.address,
         testDID2,
         "0xhash456",
         "Designer",
-        "Design",
-        90000
+        "Design"
       );
 
       const count = await employeeRegistry.employeeCount();
@@ -197,7 +210,7 @@ describe("D-HRS Contracts", function () {
     });
 
     it("Should cast a vote", async function () {
-      await hrGovernance.connect(hrAdmin).castVote(0, true, 1);
+      await hrGovernance.connect(hrAdmin).castVote(0, 1); // VoteType.For = 1
 
       const proposal = await hrGovernance.getProposal(0);
       expect(proposal.forVotes).to.equal(1);
@@ -240,7 +253,7 @@ describe("D-HRS Contracts", function () {
 
     it("Should create an employee evaluation", async function () {
       await decentralizedHRS.grantRole(await decentralizedHRS.EVALUATOR_ROLE(), hrAdmin.address);
-      
+
       const evalId = await decentralizedHRS.createEvaluation.staticCall(
         testDID,
         evaluatorDID,
@@ -317,7 +330,7 @@ describe("D-HRS Contracts", function () {
 
     it("Should submit a job application", async function () {
       const applicantDID = ethers.keccak256(ethers.toUtf8Bytes("did:hrs:applicant:001"));
-      
+
       const appId = await decentralizedHRS.submitApplication.staticCall(
         0,
         applicantDID,
@@ -351,7 +364,7 @@ describe("D-HRS Contracts", function () {
 
     it("Should update application status", async function () {
       const applicantDID = ethers.keccak256(ethers.toUtf8Bytes("did:hrs:applicant:001"));
-      
+
       await decentralizedHRS.connect(hrAdmin).updateApplicationStatus(0, applicantDID, 3); // Interview
 
       const apps = await decentralizedHRS.getJobApplications(0);
@@ -429,7 +442,7 @@ describe("D-HRS Contracts", function () {
     const transferDID = ethers.keccak256(ethers.toUtf8Bytes("did:hrs:test:transfer001"));
 
     it("Should request job transfer", async function () {
-      await decentralizedHRS.connect(employee).requestJobTransfer(
+      await decentralizedHRS.connect(hrAdmin).requestJobTransfer(
         transferDID,
         "Engineering",
         "Product",
@@ -453,6 +466,7 @@ describe("D-HRS Contracts", function () {
 
   describe("DecentralizedHRS - Layoffs", function () {
     const layoffDID = ethers.keccak256(ethers.toUtf8Bytes("did:hrs:test:layoff001"));
+    const layoffDID2 = ethers.keccak256(ethers.toUtf8Bytes("did:hrs:test:layoff002"));
 
     it("Should propose layoff", async function () {
       await decentralizedHRS.connect(hrAdmin).proposeLayoff(
@@ -460,12 +474,13 @@ describe("D-HRS Contracts", function () {
         "Company restructuring",
         30,
         Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
-        5000
+        "QmHashOfSeverance" // severanceHash (not amount)
       );
 
       const layoffs = await decentralizedHRS.getLayoffHistory(layoffDID);
       expect(layoffs.length).to.equal(1);
       expect(layoffs[0].reason).to.equal("Company restructuring");
+      expect(layoffs[0].severanceHash).to.equal("QmHashOfSeverance");
       console.log("✓ Layoff proposed");
     });
 
@@ -475,6 +490,30 @@ describe("D-HRS Contracts", function () {
       const layoffs = await decentralizedHRS.getLayoffHistory(layoffDID);
       expect(layoffs[0].approved).to.equal(true);
       console.log("✓ Layoff approved");
+    });
+
+    it("Should deny layoff", async function () {
+      // Create a new layoff for denial test
+      await decentralizedHRS.connect(hrAdmin).proposeLayoff(
+        layoffDID2,
+        "Department closure",
+        60,
+        Math.floor(Date.now() / 1000) + (60 * 24 * 60 * 60),
+        "QmHashDenied"
+      );
+
+      await decentralizedHRS.connect(hrAdmin).denyLayoff(layoffDID2, 0);
+
+      const layoffs = await decentralizedHRS.getLayoffHistory(layoffDID2);
+      expect(layoffs[0].denied).to.equal(true);
+      console.log("✓ Layoff denied");
+    });
+
+    it("Should reject approval of denied layoff", async function () {
+      await expect(
+        decentralizedHRS.connect(hrAdmin).approveLayoff(layoffDID2, 0)
+      ).to.be.revertedWith("Already denied");
+      console.log("✓ Denied layoff cannot be approved");
     });
   });
 
@@ -501,20 +540,29 @@ describe("D-HRS Contracts", function () {
     });
   });
 
-  describe("DecentralizedHRS - Interactive Communication", function () {
-    const feedbackDID = ethers.keccak256(ethers.toUtf8Bytes("did:hrs:test:feedback001"));
+  describe("ComplianceEngine", function () {
+    const testAddr = ethers.Wallet.createRandom().address;
 
-    it("Should add evaluation feedback", async function () {
-      await decentralizedHRS.connect(employee).addEvaluationFeedback(
-        0,
-        feedbackDID,
-        "Great evaluation process",
-        5
-      );
+    it("Should have no real-name auth initially", async function () {
+      const status = await complianceEngine.getRealNameStatus(testAddr);
+      expect(status.level).to.equal(0); // NONE
+      expect(status.valid).to.equal(false);
+      console.log("✓ Initial auth status is NONE");
+    });
 
-      console.log("✓ Evaluation feedback added");
+    it("Should update and verify real-name status", async function () {
+      await complianceEngine.updateRealName(testAddr, 2, 365, "0xtesthash");
+      const status = await complianceEngine.getRealNameStatus(testAddr);
+      expect(status.level).to.equal(2); // ENHANCED
+      expect(status.valid).to.equal(true);
+      console.log("✓ Real-name auth updated successfully");
+    });
+
+    it("Should add and check sanctioned address", async function () {
+      await complianceEngine.addSanctioned(testAddr);
+      const isSanctioned = await complianceEngine.isSanctioned(testAddr);
+      expect(isSanctioned).to.equal(true);
+      console.log("✓ Sanctioned address added");
     });
   });
-
-  console.log("\n=== All Tests Passed ===");
 });

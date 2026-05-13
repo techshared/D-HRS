@@ -31,11 +31,36 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// JWT Authentication middleware
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'dhrs-jwt-secret-change-in-production';
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Authentication required' });
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+  }
+}
+
+// Compliance middleware
+const ComplianceMiddleware = require('./middleware/compliance');
+const { encrypt, hash, decrypt, maskIdNumber, maskSalary } = require('./utils/crypto');
+const { moderateEmployeeData, moderateProposal } = require('./utils/moderation');
+
 // In-memory storage (replace with database in production)
 const employees = new Map();
 const credentials = new Map();
 const payrollRuns = new Map();
 const proposals = new Map();
+const auditLog = [];
 
 // Contract addresses (from local deployment)
 const CONTRACT_ADDRESSES = {
@@ -44,13 +69,12 @@ const CONTRACT_ADDRESSES = {
   payrollExecutor: process.env.PAYROLL_EXECUTOR_ADDRESS || '0x0165878A594ca255338adfa4d48449f69242Eb8F',
   benefitsNFT: process.env.BENEFITS_NFT_ADDRESS || '0xa513E6E4b8f2a923D98304ec87F64353C4D5C853',
   hrGovernance: process.env.HR_GOVERNANCE_ADDRESS || '0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6',
-  didRegistry: process.env.DID_REGISTRY_ADDRESS || '0x8A791620dd6260079BF849Dc5567aDC3F2FdC318',
-  hrToken: process.env.HR_TOKEN_ADDRESS || '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9'
+  didRegistry: process.env.DID_REGISTRY_ADDRESS || '0x8A791620dd6260079BF849Dc5567aDC3F2FdC318'
 };
 
 // Health check
 app.get('/api/v1/health', (req, res) => {
-  res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  res.json({ success: true, data: { status: 'healthy', timestamp: new Date().toISOString() } });
 });
 
 // Authentication endpoints
@@ -66,16 +90,17 @@ app.get('/api/v1/auth/challenge', (req, res) => {
 
 app.post('/api/v1/auth/connect', async (req, res) => {
   try {
-    const { did, challenge, signature } = req.body;
-    if (!did || !challenge || !signature) {
-      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    const { wallet_address, kyc_token } = req.body;
+    if (!wallet_address) {
+      return res.status(400).json({ success: false, error: 'wallet_address required' });
     }
-    const isValid = await lnd.verifyMessage(challenge, signature);
-    if (isValid) {
-      res.json({ success: true, data: { did, authenticated: true } });
-    } else {
-      res.status(401).json({ success: false, error: 'Invalid signature' });
-    }
+    // Simple token-based auth (KYC verified separately via /compliance/kyc/initiate)
+    const token = jwt.sign(
+      { wallet_address, authenticated: true, iat: Math.floor(Date.now() / 1000) },
+      process.env.JWT_SECRET || 'dhrs-jwt-secret-change-in-production',
+      { expiresIn: '24h' }
+    );
+    res.json({ success: true, data: { wallet_address, token, authenticated: true } });
   } catch (error) {
     logger.error('Auth connect error', { error: error.message });
     res.status(500).json({ success: false, error: 'Internal server error' });
@@ -83,7 +108,7 @@ app.post('/api/v1/auth/connect', async (req, res) => {
 });
 
 // Employee salary adjustment
-app.post('/api/v1/employees/:did/salary', async (req, res) => {
+app.post('/api/v1/employees/:did/salary', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), async (req, res) => {
   try {
     const { did } = req.params;
     const { salary } = req.body;
@@ -104,7 +129,7 @@ app.post('/api/v1/employees/:did/salary', async (req, res) => {
 });
 
 // Employee transfer
-app.post('/api/v1/employees/:did/transfer', (req, res) => {
+app.post('/api/v1/employees/:did/transfer', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), (req, res) => {
   try {
     const { did } = req.params;
     const { new_department, new_position } = req.body;
@@ -123,7 +148,7 @@ app.post('/api/v1/employees/:did/transfer', (req, res) => {
 });
 
 // Employee promotion
-app.post('/api/v1/employees/:did/promotion', async (req, res) => {
+app.post('/api/v1/employees/:did/promotion', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), async (req, res) => {
   try {
     const { did } = req.params;
     const { new_position, salary_increase } = req.body;
@@ -142,7 +167,7 @@ app.post('/api/v1/employees/:did/promotion', async (req, res) => {
 });
 
 // Employee layoff
-app.post('/api/v1/employees/:did/layoff', async (req, res) => {
+app.post('/api/v1/employees/:did/layoff', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), async (req, res) => {
   try {
     const { did } = req.params;
     const employee = employees.get(did);
@@ -163,22 +188,35 @@ app.get('/api/v1/contracts', (req, res) => {
   res.json({ success: true, data: CONTRACT_ADDRESSES });
 });
 
-// Employee endpoints
-app.post('/api/v1/employees', (req, res) => {
+// Compliance routes
+const complianceRoutes = require('./routes/compliance');
+app.use('/api/v1/compliance', complianceRoutes);
+
+app.post('/api/v1/employees', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), (req, res) => {
   try {
     const { wallet_address, did, personal_info_hash, role, department, salary } = req.body;
-    
+
     if (!wallet_address || !did || !role) {
       return res.status(400).json({ success: false, error: 'Missing required fields' });
     }
 
+    // 内容审核
+    const moderation = moderateEmployeeData({ role, department, personalInfoHash: personal_info_hash });
+    if (!moderation.pass) {
+      return res.status(400).json({ success: false, error: 'Content moderation failed', issues: moderation.issues });
+    }
+
+    // 加密敏感字段
+    const encryptedSalary = salary ? encrypt(String(salary)) : null;
+    const hashedPII = personal_info_hash ? hash(personal_info_hash) : null;
+
     const employee = {
       did,
       wallet_address,
-      personal_info_hash,
+      personal_info_hash: hashedPII,
       role,
       department,
-      salary,
+      salary_encrypted: encryptedSalary,
       status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -202,7 +240,7 @@ app.post('/api/v1/employees', (req, res) => {
   }
 });
 
-app.get('/api/v1/employees/:did', (req, res) => {
+app.get('/api/v1/employees/:did', authenticateToken, (req, res) => {
   const { did } = req.params;
   const employee = employees.get(did);
 
@@ -213,12 +251,12 @@ app.get('/api/v1/employees/:did', (req, res) => {
   res.json({ success: true, data: employee });
 });
 
-app.get('/api/v1/employees', (req, res) => {
+app.get('/api/v1/employees', authenticateToken, (req, res) => {
   const employeeList = Array.from(employees.values());
   res.json({ success: true, data: { employees: employeeList } });
 });
 
-app.patch('/api/v1/employees/:did', (req, res) => {
+app.patch('/api/v1/employees/:did', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), (req, res) => {
   const { did } = req.params;
   const employee = employees.get(did);
 
@@ -227,9 +265,18 @@ app.patch('/api/v1/employees/:did', (req, res) => {
   }
 
   const { role, department, salary } = req.body;
+
+  // 内容审核
+  if (role || department) {
+    const moderation = moderateEmployeeData({ role, department });
+    if (!moderation.pass) {
+      return res.status(400).json({ success: false, error: 'Content moderation failed', issues: moderation.issues });
+    }
+  }
+
   if (role) employee.role = role;
   if (department) employee.department = department;
-  if (salary) employee.salary = salary;
+  if (salary) employee.salary_encrypted = encrypt(String(salary));
   employee.updated_at = new Date().toISOString();
 
   employees.set(did, employee);
@@ -246,7 +293,7 @@ app.patch('/api/v1/employees/:did', (req, res) => {
 });
 
 // Credential endpoints
-app.post('/api/v1/credentials/issue', (req, res) => {
+app.post('/api/v1/credentials/issue', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), (req, res) => {
   try {
     const { subject_did, credential_type, data, expiry_days, metadata_uri } = req.body;
 
@@ -285,7 +332,7 @@ app.post('/api/v1/credentials/issue', (req, res) => {
   }
 });
 
-app.post('/api/v1/credentials/verify', (req, res) => {
+app.post('/api/v1/credentials/verify', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), (req, res) => {
   const { subject_did, credential_type } = req.body;
   const creds = credentials.get(subject_did);
 
@@ -308,7 +355,7 @@ app.post('/api/v1/credentials/verify', (req, res) => {
   });
 });
 
-app.get('/api/v1/credentials/:did', (req, res) => {
+app.get('/api/v1/credentials/:did', authenticateToken, (req, res) => {
   const { did } = req.params;
   const creds = credentials.get(did) || [];
 
@@ -319,7 +366,7 @@ app.get('/api/v1/credentials/:did', (req, res) => {
 });
 
 // Payroll endpoints
-app.post('/api/v1/payroll/run', (req, res) => {
+app.post('/api/v1/payroll/run', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), (req, res) => {
   const { period_start, period_end, payments } = req.body;
 
   if (!period_start || !period_end || !payments) {
@@ -357,7 +404,7 @@ app.post('/api/v1/payroll/run', (req, res) => {
   });
 });
 
-app.post('/api/v1/payroll/run/:runId/approve', (req, res) => {
+app.post('/api/v1/payroll/run/:runId/approve', authenticateToken, (req, res) => {
   const { runId } = req.params;
   const run = payrollRuns.get(parseInt(runId));
 
@@ -389,18 +436,25 @@ app.post('/api/v1/payroll/run/:runId/approve', (req, res) => {
   });
 });
 
-app.get('/api/v1/payroll/history', (req, res) => {
+app.get('/api/v1/payroll/history', authenticateToken, (req, res) => {
   const runs = Array.from(payrollRuns.values());
   res.json({ success: true, data: { payroll_runs: runs } });
 });
 
 // Governance endpoints
-app.post('/api/v1/governance/proposals', (req, res) => {
-  const { title, description, category, quorum_percentage } = req.body;
+app.post('/api/v1/governance/proposals', authenticateToken, ComplianceMiddleware.kycRequired(), ComplianceMiddleware.sanctionsScreen(), (req, res) => {
+  try {
+    const { title, description, category, quorum_percentage } = req.body;
 
-  if (!title || !description) {
-    return res.status(400).json({ success: false, error: 'Missing required fields' });
-  }
+    if (!title || !description) {
+      return res.status(400).json({ success: false, error: 'Missing required fields' });
+    }
+
+    // 内容审核
+    const moderation = moderateProposal({ title, description });
+    if (!moderation.pass) {
+      return res.status(400).json({ success: false, error: 'Content moderation failed', issues: moderation.issues });
+    }
 
   const proposalId = proposals.size;
   const proposal = {
@@ -431,9 +485,13 @@ app.post('/api/v1/governance/proposals', (req, res) => {
       status: 'active'
     }
   });
+  } catch (error) {
+    logger.error('Error creating proposal', { error: error.message });
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
 });
 
-app.post('/api/v1/governance/proposals/:proposalId/vote', (req, res) => {
+app.post('/api/v1/governance/proposals/:proposalId/vote', authenticateToken, (req, res) => {
   const { proposalId } = req.params;
   const { support, weight, reason } = req.body;
   const proposal = proposals.get(parseInt(proposalId));
@@ -467,7 +525,7 @@ app.post('/api/v1/governance/proposals/:proposalId/vote', (req, res) => {
   });
 });
 
-app.get('/api/v1/governance/proposals', (req, res) => {
+app.get('/api/v1/governance/proposals', authenticateToken, (req, res) => {
   const proposalList = Array.from(proposals.values());
   res.json({ success: true, data: { proposals: proposalList } });
 });

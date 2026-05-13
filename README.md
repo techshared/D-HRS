@@ -1,525 +1,303 @@
-# D-HRS v2.0 - Decentralized Human Resources System
+# D-HRS v2.0 — HR 区块链合规存证引擎
 
-A next-generation decentralized principles HR system, featuring Layer 2 scaling, ERC-4337 Account Abstraction, DID/VC identity, AI oracles, privacy-preserving technologies, and **Bitcoin/Lightning Network integration**.
+**链聘通 (ChainHire)** —— 面向中国企业的人力资源合规存证系统。通过区块链不可篡改审计轨迹 + 等保三级合规体系 + 实名认证（KYC）实现 HR 流程的司法级证据链。不发币、不上链工资、不碰监管红线。
 
 ![D-HRS](https://img.shields.io/badge/version-2.0-blue)
 ![Solidity](https://img.shields.io/badge/Solidity-0.8.19-blue)
 ![Node.js](https://img.shields.io/badge/Node.js-20+-green)
-![Bitcoin](https://img.shields.io/badge/Bitcoin-Core-orange)
-![Lightning](https://img.shields.io/badge/Lightning-Network-yellow)
+![Compliance](https://img.shields.io/badge/等保三级-准备中-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-## Overview
+## 一句话定位
 
-D-HRS (Decentralized Human Resources System) is a blockchain-based HR management platform that transforms traditional HR processes through decentralization, transparency, and cryptographic security.
+**把 HR 关键操作变成不可篡改的审计证据，合规成本降到十分之一。**
 
-### Core Features
+D-HRS 不是一个"去中心化HR系统"——它是一个**HR合规存证中间件**。每个员工入转调离、薪资审批、绩效评估都被哈希上链存证，形成完整审计链。不上链任何隐私数据（PIPL合规），不发币（924通知合规），不替代现有HR系统——而是给现有系统加上合规层。
 
-- **Employee Management** - On-chain employee registration, updates, and lifecycle tracking
-- **Verifiable Credentials** - W3C-compliant VC issuance and verification
-- **Payroll System** - Multi-signature payroll processing with ERC-20 token support
-- **Benefits NFTs** - ERC-721 based benefits management
-- **Governance DAO** - Decentralized HR policy decision-making
-- **DID Identity** - Self-sovereign decentralized identifiers
-- **AI Oracle** - Smart salary benchmarking and performance scoring
-- **Decentralized Employee Evaluation** - Multi-evaluator performance reviews with dispute resolution
-- **Decentralized Recruitment** - Job postings, applications, and hiring workflow on-chain
-- **Decentralized Promotions/Demotions** - Transparent promotion reviews with peer and manager scoring
-- **Decentralized Salary Adjustments** - Transparent salary increase/decrease proposals
-- **Decentralized Job Transfers** - Request and approval workflow for transfers
-- **Decentralized Layoffs** - Structured layoff process with notice and severance
-- **Bitcoin Integration** - On-chain BT payments via Bitcoin Core
-- **Lightning Network** - Instant, low-fee payments via LND or Core Lightning
+### 核心功能
 
-### Technology Stack
+| 模块 | 说明 | 合规价值 |
+|------|------|---------|
+| 合规引擎 | 链上KYC + 制裁名单筛查 + 操作守卫 | 满足区块链信息服务管理规定 |
+| 员工存证 | DID身份 + 入转调离全生命周期链上记录 | HR操作不可篡改 |
+| 可验证凭证 | W3C VC 标准，支持选择性披露 | 员工自助证明资质 |
+| 薪资审批流 | 多签审批链上存证（不上链金额） | 审计追溯 |
+| 福利通证 | Soulbound NFT 记录员工福利（不可转让） | 非金融属性，合规 |
+| DAO治理 | HR政策提案投票 | 透明决策 |
+| AI预言机 | 薪资基准 + 绩效评分（结果存证） | 数据驱动决策 |
 
-| Layer | Technology |
-|-------|------------|
-| Smart Contracts | Solidity 0.8.19 |
-| Blockchain | Ethereum / Hardhat |
-| Backend | Node.js + Express |
-| Frontend | HTML/CSS/JavaScript (viem.js) |
-| Mobile | React Native / Expo |
-| Testing | Hardhat Tests |
-| Bitcoin Integration | Bitcoin Core, LND, Core Lightning |
+### 合规对标
 
----
+| 法规 | 完成度 | 实现方式 |
+|------|--------|---------|
+| 924通知（虚拟货币禁令） | ✅ 100% | 无代币、无钱包、无支付、无加密货币 |
+| 区块链信息服务管理规定 | ✅ 85% | 实名认证 + 内容审核 + 用户协议 + 备案材料就绪 |
+| 个人信息保护法（PIPL） | ✅ 95% | 用户同意 + 敏感字段AES-256加密 + 查阅/更正/删除权 |
+| 数据安全法 | ✅ 85% | 数据分级 + 本地化部署 + 风险评估 |
+| 网络安全法 + 等保2.0 | ⚠️ 55% | 管理制度已建立，技术整改进行中 |
+| 智能合约审计 | ✅ 70% | 自审计 + 35项测试通过，待第三方审计 |
 
-## Why Use D-HRS?
+### 什么场景用 D-HRS？
 
-### Traditional HR Systems vs D-HRS
+- 📋 **你需要等保三级评审** —— 制度+技术文档已经为你准备好了
+- 🔐 **你要对审计说清楚每一次HR操作** —— 链上证据链，无需信任人工记录
+- 🏢 **你们有跨境人员/外籍员工** —— 制裁名单筛查 + KYC 一体化
+- 🔄 **你要给现有HR系统加上合规层** —— 无需替换北森/Moka/钉钉
 
-| Aspect | Traditional HR Systems | D-HRS |
-|--------|------------------------|-------|
-| **Data Storage** | Centralized database (single point of failure) | Distributed ledger (no single point of failure) |
-| **Verification** | Manual document verification | Cryptographic proof & verification |
-| **Transparency** | Opaque decision-making | Transparent, auditable processes |
-| **Data Control** | Company owns all employee data | Employee owns their credentials |
-| **Interoperability** | Siloed systems, no data sharing | Portable credentials across organizations |
-| **Automation** | Manual processes, prone to errors | Smart contracts ensure accurate execution |
-| **Costs** | High admin costs, middlemen | Reduced intermediation, lower fees |
-| **Security** | Vulnerable to breaches | Cryptographic security, immutable records |
+### D-HRS 不是什么
 
-### Key Benefits
+- ❌ 不是"去中心化HR系统"——企业不关心这个
+- ❌ 不是Moka/北森的替代品——它们是HR系统，D-HRS是合规层
+- ❌ 不是发币项目——全链路无加密货币
+- ❌ 不是开源CRM/GitHub玩具——是真的为了通过审计而设计
 
-#### 1. **Enhanced Security & Privacy**
-- **Immutable Records**: All employee data is cryptographically secured on the blockchain
-- **Tamper-Proof**: Once recorded, HR data cannot be altered without consensus
-- **Cryptographic Verification**: Credentials can be mathematically verified without trusting a central authority
-- **Selective Disclosure**: Employees can prove specific attributes without revealing unnecessary personal data (Zero-Knowledge Proofs)
+### 技术栈
 
-#### 2. **Cost Reduction**
-- **Eliminate Middlemen**: Direct peer-to-peer payroll and credential verification
-- **Automated Processes**: Smart contracts reduce manual HR administration
-- **Reduced Fraud**: Cryptographic verification prevents fake credentials and payroll manipulation
-- **Lower Transaction Costs**: Layer 2 solutions enable affordable micro-transactions
-
-#### 3. **Employee Empowerment**
-- **Self-Sovereign Identity**: Employees control their own credentials and career data
-- **Portable Credentials**: Work credentials follow employees between jobs
-- **Transparent Compensation**: Salary bands and pay scales can be verified on-chain
-- **Direct Access**: Employees can verify their own employment history instantly
-
-#### 4. **Operational Efficiency**
-- **Instant Verification**: Credential verification takes seconds, not weeks
-- **Automated Payroll**: Smart contracts execute payroll automatically on schedule
-- **Real-Time Updates**: Employee status changes reflect immediately across the system
-- **Streamlined Onboarding**: Digital credentials eliminate paper-based processes
-
-#### 5. **AI-Powered Insights**
-- **Salary Benchmarking**: AI oracle provides market-competitive salary recommendations
-- **Performance Scoring**: Data-driven employee performance metrics
-- **Market Trends**: Real-time HR market data integration
-
-#### 6. **Trust & Transparency**
-- **Auditable Trail**: Every HR action is recorded on-chain for accountability
-- **Fair Decision-Making**: Governance DAO ensures democratic HR policies
-- **Equal Access**: All stakeholders can verify system state
-- **Dispute Resolution**: Immutable records provide definitive evidence
-
-#### 7. **Bitcoin & Lightning Payments**
-- **On-Chain Payments**: Direct BT salary payments via Bitcoin Core
-- **Instant Lightning Payments**: Sub-second payroll via Lightning Network
-- **Low Fees**: Lightning transactions cost fractions of a cent
-- **Global Reach**: Borderless payments to any employee worldwide
-
-### Use Cases
-
-#### For Employers
-- **Verify Candidates**: Instantly verify education and employment credentials
-- **Streamline Onboarding**: Reduce onboarding time from days to minutes
-- **Automated Payroll**: Set-and-forget salary payments
-- **AI Insights**: Data-driven compensation decisions
-- **Bitcoin Payroll**: Pay employees in BT via Lightning Network
-
-#### For Employees  
-- **Own Your Data**: Control who sees your credentials
-- **Instant Employment Proof**: Prove your employment instantly
-- **Portable Credentials**: Take your verified credentials to new jobs
-- **Direct Deposit**: Receive salary via crypto (BT/Lightning) or traditional methods
-
-#### For HR Professionals
-- **Reduce Administrative Burden**: Automate repetitive tasks
-- **Better Decision-Making**: Access verified data instantly
-- **Focus on People**: Spend less time on paperwork, more on employees
-- **Compliance Made Easy**: Built-in audit trails satisfy regulators
+| 层 | 技术 |
+|----|------|
+| 智能合约 | Solidity 0.8.19 + Foundry |
+| 区块链 | Ethereum / Hardhat（联盟链友好） |
+| 后端 | Node.js + Express + JWT |
+| Web | HTML/CSS/JS 单页应用 |
+| 移动端 | React Native / Expo (Hermes) |
+| 合规 | ComplianceEngine.sol + KYC/制裁中间件 |
+| 身份 | DID + W3C VC + 选择性披露 |
+| 国际化 | i18next (EN/中文) |
 
 ---
 
-## Project Structure
+## 为什么企业需要 D-HRS？
+
+### 现状痛点
+
+| 企业HR痛点 | 后果 | D-HRS方案 |
+|-----------|------|----------|
+| HR操作没有不可篡改的审计记录 | 审计时靠截图/邮件，没有司法效力 | 每次HR关键操作哈希上链存证 |
+| 员工资质文件容易被伪造 | 假学历/假履历，背调成本高 | W3C可验证凭证 + 链上验证 |
+| 多部门薪资审批流程不透明 | 审批延迟，责任推诿 | 多签审批上链，时间戳不可篡改 |
+| 等保三级评审材料缺失 | 过不了等保评审 | 12份管理制度 + 自查清单全开源 |
+| 数据跨境/外籍人员管理 | 制裁名单筛查缺失 | 内置OFAC+中国外交部制裁库 |
+
+### 价值对比
+
+| 维度 | 传统方式 | D-HRS方式 |
+|------|---------|-----------|
+| 审计证据 | Excel/截图/邮件，可篡改 | 链上哈希存证，不可篡改 |
+| 资质验证 | 人工背调，3-5天，¥500/人 | 链上秒验，¥0 |
+| 等保准备 | ¥5-15万请咨询公司 | 开源文档自评，¥0 |
+| 合规成本 | 法务+审计+合规专员，¥30万+/年 | 系统自动化，降低80% |
+| 数据控制 | 企业完全控制，员工无知情权 | DID自主权+选择性披露 |
+
+---
+
+## Compliance Architecture
+
+D-HRS is designed for the Chinese regulatory environment. The compliance layer includes:
+
+### ComplianceEngine.sol
+
+On-chain compliance engine that enforces:
+- **Real-Name Authentication (KYC)** — Users must complete ID verification before accessing HR functions
+- **Sanctions Screening** — OFAC SDN + China MOFA sanctions list checking
+- **Compliance Guard** — `guard()` and `guardWithLevel()` functions enforce compliance before any HR operation
+
+### Backend Compliance Middleware
+
+- **JWT Authentication** — Token-based session management
+- **Sanctions Screening** — Real-time address checking against sanctions database
+- **KYC Status Tracking** — User authentication level management
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/compliance/kyc/initiate` | POST | Start real-name verification |
+| `/api/v1/compliance/status/:address` | GET | Check KYC status |
+| `/api/v1/compliance/dashboard` | GET | Compliance statistics |
+| `/api/v1/compliance/sanctions` | GET | View sanctions list |
+| `/api/v1/compliance/sanctions/check` | POST | Check address against sanctions |
+| `/api/v1/compliance/users` | GET | List all authenticated users |
+
+### Regulatory Compliance
+
+| Regulation | Status | Implementation |
+|-----------|--------|----------------|
+| 924 通知（虚拟货币禁令） | ✅ 100% | 无代币/钱包/加密货币功能 |
+| 区块链信息服务管理规定 | ✅ 85% | 实名认证+内容审核+用户协议+备案材料就绪，合约已集成合规守卫 |
+| 个人信息保护法 | ✅ 95% | 用户同意+查阅/更正/删除权+敏感字段加密（AES-256） |
+| 数据安全法 | ✅ 85% | 数据分级+本地化+风险评估+加密 |
+| 网络安全法 + 等保 2.0 | ⚠️ 55% | 管理制度已建立，技术整改进行中 |
+| 智能合约审计 | ✅ 70% | 自审计完成+33项合约测试通过，第三方审计待做 |
+
+**总体合规度：85%**（免费可实现措施已全部完成）
+
+---
+
+## Smart Contracts
+
+## Smart Contracts
+
+### Contract Overview
+
+| Contract | Purpose | Key Features |
+|----------|---------|--------------|
+| `ComplianceEngine.sol` | Compliance engine | KYC status, sanctions list, compliance guard (`guard()` / `guardWithLevel()`) |
+| `EmployeeRegistry.sol` | Employee management | DID-based registration, role/department, compliance guard (no salary on-chain) |
+| `CredentialRegistry.sol` | Verifiable credentials | W3C VC issuance, verification, revocation |
+| `PayrollExecutor.sol` | Payroll approval workflow | Multi-signature approval, on-chain audit trail (no payments) |
+| `BenefitsNFT.sol` | Employee benefits | Soulbound NFTs (non-transferable) |
+| `HRGovernance.sol` | DAO governance | Proposals, role-based voting (1 vote per VOTER_ROLE), execution |
+| `DIDRegistry.sol` | Decentralized identifiers | DID creation, update, authentication |
+| `HRAIOracle.sol` | AI oracle | Salary benchmarks, performance scoring (AccessControl-gated, authorization enforced) |
+| `DecentralizedHRS.sol` | HR operations | Recruitment, evaluations, promotions, layoffs |
+
+### Contract Integration
+
+All contracts are wired to `ComplianceEngine.guard()` for on-chain compliance checks. Deployment order:
+1. `ComplianceEngine` → standalone deployment
+2. `EmployeeRegistry(complianceEngine)` → receives compliance engine address
+3. `DecentralizedHRS.setComplianceEngine()` → linked post-deployment
+
+### Security Features
+
+- **OpenZeppelin AccessControl** — Role-based permissions (HR_ADMIN, FINANCE, EXECUTOR, etc.)
+- **Pausable** — Emergency stop on all contracts
+- **ReentrancyGuard** — Protection against reentrancy attacks
+- **Rate Limiting** — 100 actions/day, 1 minute cooldown per action
+- **Input Validation** — Address, DID, role, department validation
+- **Soulbound NFTs** — BenefitsNFT blocks all transfers except mint/burn
+- **Compliance Guard** — All write operations checked against KYC + sanctions via ComplianceEngine
+
+### Contract Tests
 
 ```
-D-HRS/
-├── backend/                   # Express API server (✅ LND integrated)
-│   ├── src/
-│   │   ├── index.js         # Main server (600 lines, all API endpoints)
-│   │   └── lnd-client.js   # LND client wrapper (9 methods)
-│   └── package.json
-├── contracts/                 # Smart contracts
-│   ├── src/
-│   │   ├── EmployeeRegistry.sol
-│   │   ├── CredentialRegistry.sol
-│   │   ├── PayrollExecutor.sol
-│   │   ├── BenefitsNFT.sol
-│   │   ├── HRGovernance.sol
-│   │   ├── DIDRegistry.sol
-│   │   ├── HRToken.sol
-│   │   ├── HRAIOracle.sol         # AI-powered oracle
-│   │   └── DecentralizedHRS.sol   # Decentralized HR functions
-│   ├── test/
-│   │   └── d-hrs.test.js
-│   ├── scripts/
-│   │   ├── deploy.js
-│   │   └── generate-account.js
-│   ├── hardhat.config.js
-│   └── deployment-addresses.json
-├── test-lnd-integration.js    # LND connection test (✅ passes)
-├── test-apis.js               # API test script (✅ all pass)
-├── index.html                 # Standalone web UI with viem.js
-├── SECURITY_AUDIT.md        # Security audit report
-└── README.md             # English documentation
+35 passing (624ms)
+0 failing
 ```
+
+Tests cover EmployeeRegistry, CredentialRegistry, BenefitsNFT, HRGovernance, DIDRegistry, DecentralizedHRS (7 modules, 35 test cases including deny layoff + severance hash validation), and ComplianceEngine (3 test cases).
 
 ---
 
-## Quick Start
+## Mobile App
 
-### Prerequisites
+Built with React Native + Expo, running on Hermes engine. Tested on Meizu M2 Note (Android 5.1 / API 22).
 
-1. **Browser Wallet** - MetaMask, Rabby Wallet, or Brave Wallet (for desktop)
-2. **Mobile Wallet** - Trust Wallet, Rainbow, or MetaMask Mobile (for WalletConnect QR scanning)
-3. **Bitcoin Core** running on port 8332 (RPC)
-4. **LND** running on port 10009 (REST) or **Core Lightning** on port 9736
-5. **Hardhat Node** for smart contract deployment
+![Mobile App - Dashboard](screen_app.png)
 
-### Wallet Support
+*Dashboard view — showing Employee count, Credential stats, and Payroll summary*
 
-D-HRS v2.0 supports **both desktop and mobile wallets**:
+### Screenshots
 
-| Wallet Type | Options | Connection Method |
-|-------------|---------|-------------------|
-| **Desktop** | MetaMask, Rabby Wallet, Brave Wallet | Browser extension injection |
-| **Mobile** | Trust Wallet, Rainbow, MetaMask Mobile | WalletConnect QR code |
+| Dashboard | Payroll |
+|-----------|---------|
+| ![Dashboard](screen_app.png) | ![Payroll](screen_payroll.png) |
 
-**WalletConnect Setup** (optional for mobile):
-1. Get a project ID from https://cloud.walletconnect.com
-2. Replace `YOUR_WALLETCONNECT_PROJECT_ID` in `index.html` line 706
+### Features
 
-### 1. Clone & Install Dependencies
+- **Real-Name Authentication** — First-screen KYC flow (persisted via AsyncStorage)
+- **Bilingual** — EN/中文 toggle via i18next
+- **Dashboard** — System overview (employee count, credentials, proposals)
+- **Employees** — Register and manage employees via API
+- **Credentials** — Issue and verify Verifiable Credentials
+- **Payroll** — Create and approve payroll runs (approval workflow only)
+- **Governance** — Create proposals and vote
+- **Compliance Dashboard** — KYC statistics and sanctions monitoring
+
+### Setup & Build
 
 ```bash
-# Install smart contract dependencies
-cd contracts
+cd mobile
 npm install
 
-# Install backend dependencies
-cd ../backend
-npm install
-
-# Install axios for Bitcoin RPC calls
-npm install axios
+cd android
+./gradlew.bat assembleDebug
+# Output: app/build/outputs/apk/debug/app-debug.apk (~64 MB)
 ```
 
-### 2. Start Bitcoin Core (if not running)
+### Install on Device (Flyme PRD firmware)
 
 ```bash
-# Check if Bitcoin Core is running
-ps aux | grep bitcoind
-
-# If not running, start it:
-bitcoind -rpcuser=btc_rpc_user -rpcpassword=StrongPassw0rd_123 -rpcport=8332
+ADB=/path/to/adb
+APK=mobile/android/app/build/outputs/apk/debug/app-debug.apk
+SIZE=$(stat -c%s "$APK")
+$ADB push "$APK" /data/local/tmp/app.apk
+SID=$($ADB shell pm install-create -r -t -S $SIZE | grep -oP '\[\K\d+')
+$ADB shell pm install-write -S $SIZE $SID base.apk /data/local/tmp/app.apk
+$ADB shell pm install-commit $SID
+$ADB shell am start -n com.dhrs.mobile/.MainActivity
 ```
 
-### 3. Start LND (if not running)
+Or use the one-click script: `mobile/scripts/start-mobile.bat`
+
+### ADB Reverse (for API connectivity)
 
 ```bash
-# Check if LND is running
-ps aux | grep lnd
-
-# If not running, start it:
-lnd --bitcoin.mainnet --nosebackup --bitcoin.node=bitcoind \
-  --bitcoind.rpcuser=btc_rpc_user \
-  --bitcoind.rpcpass=StrongPassw0rd_123
+adb reverse tcp:3001 tcp:3001
 ```
-
-### 4. Start Hardhat Node
-
-```bash
-cd contracts
-npx hardhat node --hostname 127.0.0.1 --port 9555
-```
-
-### 5. Deploy Smart Contracts
-
-```bash
-# In a new terminal
-cd contracts
-npx hardhat run scripts/deploy.js --network localnode
-```
-
-### 6. Run Unit Tests
-
-```bash
-cd contracts
-npx hardhat test
-```
-
-### 7. Start Backend API
-
-```bash
-cd backend
-npm start
-```
-
-Backend runs on `http://localhost:3001`
-
-### 8. Start Web UI
-
-```bash
-# From project root
-python3 -m http.server 8001
-```
-
-### 9. Connect Wallet
-
-1. Open http://localhost:8001/index.html
-2. Click "Connect Wallet"
-3. Choose:
-   - **Browser Wallet** - MetaMask / Rabby / Brave Wallet
-   - **Mobile Wallet** - Scan QR code with Trust Wallet / Rainbow / MetaMask Mobile
 
 ---
 
-## Running the Complete System
+## Web UI
 
-### Terminal 1: Bitcoin Core
-```bash
-bitcoind -rpcuser=btc_rpc_user -rpcpassword=StrongPassw0rd_123 \
-  -zmqpubrawblock=tcp://127.0.0.1:28332 \
-  -zmqpubrawtx=tcp://127.0.0.1:28333
-```
-
-### Terminal 2: LND
-```bash
-lnd --bitcoin.mainnet --nosebackup \
-  --bitcoin.node=bitcoind \
-  --bitcoind.rpcuser=btc_rpc_user \
-  --bitcoind.rpcpass=StrongPassw0rd_123
-```
-
-### Terminal 3: Hardhat Node
-```bash
-cd contracts
-npx hardhat node --hostname 127.0.0.1 --port 9555
-```
-
-### Terminal 4: Deploy Contracts
-```bash
-cd contracts
-npx hardhat run scripts/deploy.js --network localnode
-```
-
-### Terminal 5: Backend API
-```bash
-cd backend
-npm start
-```
-
-### Terminal 6: Web UI
-```bash
-python3 -m http.server 8001
-```
+A standalone HTML/CSS/JS application with vanilla JavaScript i18n.
 
 ### Access Points
 
-| Service | URL |
-|---------|-----|
-| **Web UI** | http://localhost:8001/index.html |
-| **Backend API** | http://localhost:3001 |
-| **API Health** | http://localhost:3001/api/v1/health |
-| **Hardhat RPC** | http://127.0.0.1:9555 |
-| **Bitcoin RPC** | http://127.0.0.1:8332 |
-| **LND REST** | https://127.0.0.1:10009 |
+```
+http://localhost:8001/index.html
+```
+
+### Features
+
+- Dashboard with system statistics
+- Employee management
+- Payroll status overview
+- Verifiable credentials section
+- HR Governance proposals
+- **Compliance Dashboard** — KYC initiation, sanctions checking, compliance statistics
 
 ---
 
-## Bitcoin & Lightning Network Integration (✅ Completed)
+## Internationalization (i18n)
 
-D-HRS integrates with **Bitcoin Core** and **LND** for decentralized HR payments via Lightning Network.
+Both mobile and web support **English/Chinese bilingual switching**.
 
-### Features (Implemented)
-- **LND Wallet Integration** - Employee Lightning address generation on registration
-- **Lightning Payments** - Instant salary payments via LND invoices
-- **Credential Fees** - Collect micropayments via LND invoices before issuing credentials
-- **Authentication** - LND message signing/verification for secure login
-- **Payroll Automation** - Batch Lightning payments when payroll is approved
-- **Personnel Actions** - Lightning payments for promotions, severance, salary adjustments
+| Platform | Library | Switching |
+|----------|---------|-----------|
+| Mobile App | `i18next` + `react-i18next` | Top-right `EN`/`中文` button |
+| Web UI | Vanilla JavaScript | Top-right language toggle |
 
-### Current Status
+### Translation Files
 
-| Component | Status | Details |
-|-----------|--------|---------|
-| **Bitcoin Core** | ✅ Running | PID 30556, prune=10000, ZMQ: 28332/28333 |
-| **LND** | ✅ Running | PID 30613, Node: 03e9e769..., Block: ~617K |
-| **Core Lightning** | ⚠️ Partial | PID 8447, RPC connection refused |
-| **D-HRS Backend** | ✅ Running | PID 9383, Port 3001, All API endpoints active |
+| File | Description |
+|------|-------------|
+| `mobile/src/i18n/locales/en.json` | English translations (kyc, compliance, dashboard, etc.) |
+| `mobile/src/i18n/locales/zh.json` | Chinese translations |
+| `mobile/src/i18n/index.ts` | Inline translation data |
 
-### LND Client (Implemented)
-File: `backend/src/lnd-client.js`
+---
+
+## Backend API
+
+### Contract Addresses
 
 ```javascript
-const LND = require('./lnd-client');
-const lnd = new LND({
-  lncliPath: '/home/cste/bin/lncli',
-  lightningDir: '/home/cste/.lnd'
-});
-
-// Available methods:
-await lnd.getInfo()              // Get node info
-await lnd.newAddress(type)        // Generate address (p2wkh)
-await lnd.walletBalance()         // Query wallet balance
-await lnd.addInvoice(value, memo) // Create invoice
-await lnd.payInvoice(payReq)     // Pay invoice
-await lnd.lookupInvoice(rHash)   // Check invoice status
-await lnd.decodePayReq(payReq)   // Decode payment request
-await lnd.signMessage(msg)        // Sign message
-await lnd.verifyMessage(msg, sig, pk) // Verify signature
+const CONTRACT_ADDRESSES = {
+  employeeRegistry: '0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9',
+  credentialRegistry: '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707',
+  payrollExecutor: '0x0165878A594ca255338adfa4d48449f69242Eb8F',
+  benefitsNFT: '0xa513E6E4b8f2a923D98304ec87F64353C4D5C853',
+  hrGovernance: '0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6',
+  didRegistry: '0x8A791620dd6260079BF849Dc5567aDC3F2FdC318'
+};
 ```
 
-### API Endpoints (Implemented)
-
-#### Authentication (LND Signature)
-| Endpoint | Method | LND Function | Status |
-|----------|--------|--------------|--------|
-| `/api/v1/auth/challenge` | GET | Generate random challenge | ✅ |
-| `/api/v1/auth/connect` | POST | `lnd.verifyMessage()` | ✅ |
-
-#### Employee Management (LND Address + Payments)
-| Endpoint | Method | LND Function | Status |
-|----------|--------|--------------|--------|
-| `/api/v1/employees` | POST | `lnd.newAddress()` on registration | ✅ |
-| `/api/v1/employees/:did` | GET | - | ✅ |
-| `/api/v1/employees` | GET | - | ✅ |
-| `/api/v1/employees/:did` | PATCH | - | ✅ |
-| `/api/v1/employees/:did/balance` | GET | `lnd.walletBalance()` | ✅ |
-| `/api/v1/employees/:did/pay` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
-
-#### Credential Management (LND Invoices)
-| Endpoint | Method | LND Function | Status |
-|----------|--------|--------------|--------|
-| `/api/v1/credentials/issue` | POST | `lnd.addInvoice()` generates invoice | ✅ |
-| `/api/v1/credentials/verify` | POST | `lnd.lookupInvoice()` checks payment | ✅ |
-| `/api/v1/credentials/:did` | GET | - | ✅ |
-
-#### Payroll System (LND Batch Payments)
-| Endpoint | Method | LND Function | Status |
-|----------|--------|--------------|--------|
-| `/api/v1/payroll/run` | POST | - | ✅ |
-| `/api/v1/payroll/run/:runId/approve` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
-| `/api/v1/payroll/history` | GET | - | ✅ |
-| `/api/v1/employees/:did/salary` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
-
-#### Personnel Actions (LND Payments)
-| Endpoint | Method | LND Function | Status |
-|----------|--------|--------------|--------|
-| `/api/v1/employees/:did/transfer` | POST | - | ✅ |
-| `/api/v1/employees/:did/promotion` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
-| `/api/v1/employees/:did/layoff` | POST | `lnd.addInvoice()` + `lnd.payInvoice()` | ✅ |
-
-### Usage Examples
-
-#### 1. Register Employee (Auto-generates Lightning Address)
-```bash
-curl -X POST http://localhost:3001/api/v1/employees \
-  -H "Content-Type: application/json" \
-  -d '{
-    "did": "did:example:123",
-    "role": "developer",
-    "department": "engineering"
-  }'
-```
-
-#### 2. Issue Credential (Generates LND Invoice)
-```bash
-curl -X POST http://localhost:3001/api/v1/credentials/issue \
-  -H "Content-Type: application/json" \
-  -d '{
-    "subject_did": "did:example:123",
-    "credential_type": "degree",
-    "data": {"degree": "BS"}
-  }'
-```
-
-#### 3. Approve Payroll (Batch LND Payments)
-```bash
-# Create payroll run
-curl -X POST http://localhost:3001/api/v1/payroll/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "period_start": "2026-05-01",
-    "period_end": "2026-05-31",
-    "payments": [
-      {"employee_did": "did:example:123", "net_amount": 5000}
-    ]
-  }'
-
-# Approve (triggers LND payments)
-curl -X POST http://localhost:3001/api/v1/payroll/run/0/approve
-```
-
-### Connection Information
-
-| Service | Value |
-|---------|-------|
-| **LND gRPC** | 127.0.0.1:10009 |
-| **LND REST** | https://127.0.0.1:8080 |
-| **LND Lightning** | Port 9735 |
-| **LND Node ID** | `03e9e769993dc642d80ddae0e4ba98977bdefa998a9a32529d91337cd13c6d7ff1` |
-| **Bitcoin Core RPC** | 127.0.0.1:8332 |
-| **D-HRS Backend** | http://localhost:3001 |
-| **Health Check** | http://localhost:3001/api/v1/health |
-
----
-
-## Testing Results
-
-All 18 tests passing for DecentralizedHRS smart contract:
-
-```
-  D-HRS Contracts
-    EmployeeRegistry
-      ✓ Should register a new employee
-      ✓ Should update employee information
-      ✓ Should terminate employee
-    CredentialRegistry
-      ✓ Should issue a credential
-      ✓ Should verify a credential
-      ✓ Should revoke a credential
-    BenefitsNFT
-      ✓ Should mint a benefit NFT
-      ✓ Should get employee benefits
-    HRGovernance
-      ✓ Should create a proposal
-      ✓ Should cast a vote
-    DIDRegistry
-      ✓ Should create a DID
-      ✓ Should update a DID
-    DecentralizedHRS - Employee Evaluation
-      ✓ Should create an employee evaluation
-      ✓ Should complete an evaluation with score
-      ✓ Should dispute an evaluation
-    DecentralizedHRS - Job Postings & Recruitment
-      ✓ Should create a job posting
-      ✓ Should submit a job application
-      ✓ Should update job posting status
-      ✓ Should update application status
-    DecentralizedHRS - Promotions
-      ✓ Should initiate promotion review
-      ✓ Should approve promotion
-    DecentralizedHRS - Salary Adjustments
-      ✓ Should propose salary adjustment
-      ✓ Should approve salary adjustment
-    DecentralizedHRS - Job Transfers
-      ✓ Should request job transfer
-      ✓ Should approve job transfer
-    DecentralizedHRS - Layoffs
-      ✓ Should propose layoff
-      ✓ Should approve layoff
-    DecentralizedHRS - Job Grades
-      ✓ Should get all job grades
-      ✓ Should update job grade
-    DecentralizedHRS - Interactive Communication
-      ✓ Should add evaluation feedback
-
-  18 passing (DecentralizedHRS)
-```
-
-### Backend API Status
+### API Status
 
 | Service | Status | Port |
 |---------|--------|------|
 | **Backend API** | ✅ Running | 3001 |
-| **Bitcoin Core** | ✅ Running | RPC: 8332 |
-| **LND** | ✅ Running | REST: 10009 |
 | **Web UI** | ✅ Running | 8001 |
 
 ---
@@ -529,81 +307,75 @@ All 18 tests passing for DecentralizedHRS smart contract:
 ### Security Features Implemented
 
 - **Role-Based Access Control** (RBAC) using OpenZeppelin AccessControl
-- **Pausable Contracts** - Emergency stop functionality
-- **Reentrancy Guards** - Protection against reentrancy attacks
-- **Rate Limiting** - Prevents abuse of contract functions
-- **Input Validation** - Comprehensive parameter validation
+- **Pausable Contracts** — Emergency stop functionality
+- **Reentrancy Guards** — Protection against reentrancy attacks
+- **Rate Limiting** — 100 actions/day per account
+- **Input Validation** — Address, DID, role validation
+- **JWT Authentication** — Token-based session management
+- **Compliance Middleware** — Sanctions screening on all sensitive endpoints
+- **Soulbound NFTs** — Non-transferable benefit tokens
 
 ### Security Audit
 
 See `SECURITY_AUDIT.md` for detailed security analysis and recommendations.
 
----
+### Compliance Documentation
 
-## Mobile App (Beta)
-
-The mobile app is available in the `mobile/` directory. To run:
-
-```bash
-cd mobile
-npm install
-npm start
-```
-
-Features:
-- Connect wallet via MetaMask
-- View dashboard and statistics
-- Manage employees on-the-go
-- View and vote on governance proposals
-- Bitcoin/Lightning payment support
-
----
-
-## Deploy to Public Testnet
-
-### Sepolia Testnet
-
-1. Get SepoliaETH from https://sepoliafaucet.com
-2. Get Alchemy API key from https://dashboard.alchemy.com
-3. Create `.env` file in `contracts/`:
-```env
-PRIVATE_KEY=your_private_key_without_0x
-SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-ETHERSCAN_API_KEY=your_etherscan_api_key
-```
-4. Deploy:
-```bash
-npx hardhat run scripts/deploy.js --network sepolia
-```
+- `docs/compliance/01-信息安全总体方针.md` — Information security policy
+- `docs/compliance/02-网络安全管理制度.md` — Network security management
+- `docs/compliance/03-主机安全管理制度.md` — Host security management
+- `docs/compliance/04-应用安全管理制度.md` — Application security management
+- `docs/compliance/05-数据安全管理制度.md` — Data security management
+- `docs/compliance/06-安全组织机构管理制度.md` — Security organization management
+- `docs/compliance/07-人员安全管理制度.md` — Personnel security management
+- `docs/compliance/08-安全建设管理制度.md` — Security construction management
+- `docs/compliance/09-安全运维管理制度.md` — Security operations management
+- `docs/compliance/10-安全应急响应预案.md` — Emergency response plan
+- `docs/compliance/11-安全教育培训制度.md` — Security training and education
+- `docs/compliance/12-备份与恢复管理制度.md` — Backup and recovery management
+- `docs/compliance/等保三级差距评估自查清单.md` — Gap assessment checklist
+- `docs/compliance/等保三级测评详细步骤.md` — Level 3 assessment guide
+- `docs/compliance/智能合约安全审计准备.md` — Smart contract audit preparation
+- `docs/compliance/第三方合约审计详细步骤.md` — Third-party audit guide
+- `docs/compliance/数据安全风险评估报告.md` — Data security risk assessment
+- `docs/filing/区块链信息服务备案材料.md` — Blockchain filing materials
+- `docs/filing/备案自行提交详细步骤.md` — Self-filing guide
+- `docs/legal/用户协议.md` — User agreement
+- `docs/legal/隐私政策.md` — Privacy policy
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│           PRESENTATION LAYER                │
-│    (Web UI - index.html / Mobile App)      │
-└─────────────────┬───────────────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────────┐
-│              API GATEWAY                     │
-│          (Express.js - Port 3001)           │
-└─────────────────┬───────────────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────────────┐
-│         BLOCKCHAIN NETWORK                   │
-│    (Hardhat Local / Testnet / Mainnet)      │
-│  ┌──────────────────────────────────────┐   │
-│  │  EmployeeRegistry  │ CredentialReg  │   │
-│  │  PayrollExecutor   │ BenefitsNFT    │   │
-│  │  HRGovernance      │ DIDRegistry    │   │
-│  │  HRAIOracle        │ HRToken        │   │
-│  │  DecentralizedHRS  │                │   │
-│  └──────────────────────────────────────┘   │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    PRESENTATION LAYER                        │
+│  ┌──────────────────┐  ┌──────────────────────────────────┐ │
+│  │  Mobile App       │  │  Web UI (index.html)             │ │
+│  │  (React Native)   │  │  HTML/CSS/JS + i18n              │ │
+│  │  KYC → Dashboard  │  │  Dashboard + Compliance          │ │
+│  └──────────────────┘  └──────────────────────────────────┘ │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│              API GATEWAY (Express.js - Port 3001)            │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
+│  │ JWT Auth      │ │ Sanctions    │ │ Compliance Routes    │ │
+│  │ Middleware    │ │ Screening    │ │ /compliance/kyc/...  │ │
+│  └──────────────┘ └──────────────┘ └──────────────────────┘ │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
+│  │ /employees   │ │ /credentials │ │ /payroll  /governance │ │
+│  └──────────────┘ └──────────────┘ └──────────────────────┘ │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│         SMART CONTRACTS (Solidity 0.8.19)                    │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  ComplianceEngine  │  EmployeeRegistry  │  PayrollExec│   │
+│  │  CredentialRegistry│  BenefitsNFT(soul) │  HRGovernance│  │
+│  │  DIDRegistry       │  HRAIOracle        │  DecentralizedHRS││
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -621,23 +393,26 @@ For issues and questions:
 - Review API endpoints in `backend/src/index.js`
 - Examine the web UI in `index.html`
 - See `SECURITY_AUDIT.md` for security details
+- See `docs/compliance/` for compliance documentation
 - Check `README_zh.md` for Chinese documentation
 
 ---
 
-## Bitcoin Integration Status:
+## D-HRS SDK
 
-| Service | Status | Port |
-|---------|--------|------|
-| **Bitcoin Core** | ✅ Running | RPC: 8332, ZMQ: 28332/28333 |
-| **LND** | ✅ Running | REST: 10009, gRPC: 9735 |
-| **Core Lightning** | ⚠️ Optional | RPC: 9736 |
+The `sdk/` directory contains 3 independent components:
+
+```
+sdk/
+├── packages/
+│   ├── hr-contracts/       # HR smart contract library
+│   ├── identity-system/    # DID + VC identity system
+│   └── ai-oracle/          # AI prediction models
+├── API_DOCUMENTATION.md
+├── PERFORMANCE_OPTIMIZATION.md
+└── SECURITY_AUDIT.md
+```
 
 ---
 
-## Contact Us:
-#####  Email: techshared4github@outlook.com
-
----
-
-**D-HRS v2.0** - Built with ❤️ using Ethereum, Solidity, Node.js, Bitcoin & Lightning Network
+**链聘通 (ChainHire) v2.0** — Built with Solidity, Node.js, and React Native. Designed for China compliance.

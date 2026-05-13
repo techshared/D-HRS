@@ -1,0 +1,92 @@
+{
+  "app": {
+    "title": "链聘通",
+    "subtitle": "去中心化人力资源系统 — 区块链存证",
+    "footer": "链聘通 v2.0 · 中国合规 · 无加密货币 · 链上审计存证"
+  },
+  "status": {
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "connecting": "连接中..."
+  },
+  "tabs": {
+    "dashboard": "概览",
+    "employees": "员工",
+    "credentials": "凭证",
+    "payroll": "工资",
+    "governance": "治理"
+  },
+  "login": {
+    "login": "登录",
+    "logout": "登出"
+  },
+  "wallet": {
+    "connect": "连接钱包",
+    "disconnect": "断开连接",
+    "noWallet": "请安装 MetaMask！",
+    "connectFailed": "钱包连接失败"
+  },
+  "dashboard": {
+    "title": "系统概览",
+    "totalEmployees": "总员工",
+    "activeEmployees": "在职员工",
+    "departments": "部门数",
+    "payrollStatus": "工资状态",
+    "active": "运行中",
+    "contracts": "已部署合约",
+    "contractNote": "合约地址在区块链部署后显示。"
+  },
+  "employees": {
+    "title": "员工管理",
+    "add": "+ 添加员工",
+    "did": "DID",
+    "role": "角色",
+    "department": "部门",
+    "salary": "薪资",
+    "status": "状态",
+    "actions": "操作",
+    "view": "查看",
+    "loading": "加载员工数据...",
+    "noData": "暂无数据",
+    "empty": "未找到员工"
+  },
+  "credentials": {
+    "title": "可验证凭证",
+    "issue": "签发凭证",
+    "verify": "验证凭证",
+    "empty": "暂无已签发凭证"
+  },
+  "payroll": {
+    "title": "工资管理",
+    "create": "创建工资结算",
+    "history": "查看历史",
+    "currentPeriod": "当前周期",
+    "totalAmount": "总金额",
+    "status": "状态",
+    "processing": "处理中",
+    "runTitle": "结算",
+    "period": "周期",
+    "empty": "暂无工资记录",
+    "approvals": "审批数"
+  },
+  "governance": {
+    "title": "HR 治理",
+    "create": "创建提案",
+    "for": "赞成：",
+    "against": "反对：",
+    "abstain": "弃权：",
+    "vote": "投票",
+    "voteFor": "赞成投票",
+    "voteAgainst": "反对投票",
+    "promptTitle": "请输入提案标题",
+    "promptDesc": "请输入提案描述",
+    "empty": "暂无活跃提案",
+    "loginRequired": "请登录后创建提案"
+  },
+  "error": {
+    "loadEmployees": "加载员工数据失败",
+    "loginFailed": "登录失败，请重试。",
+    "createProposal": "创建提案失败",
+    "vote": "投票失败"
+  }
+}

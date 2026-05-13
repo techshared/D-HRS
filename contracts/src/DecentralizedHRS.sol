@@ -5,6 +5,10 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+interface IComplianceEngine {
+    function guard(address _user, bytes32 _txId) external view;
+}
+
 contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     bytes32 public constant HR_ADMIN_ROLE = keccak256("HR_ADMIN_ROLE");
     bytes32 public constant EVALUATOR_ROLE = keccak256("EVALUATOR_ROLE");
@@ -139,17 +143,10 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
         string reason;
         uint256 noticePeriod;
         uint256 effectiveDate;
-        uint256 severanceAmount;
+        string severanceHash;
         bool approved;
+        bool denied;
         address approver;
-        uint256 timestamp;
-    }
-
-    struct EvaluationFeedback {
-        uint256 evaluationId;
-        bytes32 employeeDID;
-        string feedback;
-        uint256 rating;
         uint256 timestamp;
     }
 
@@ -161,36 +158,31 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     mapping(bytes32 => JobTransfer[]) public transferHistory;
     mapping(bytes32 => EmployeeLayoff[]) public layoffHistory;
     mapping(uint256 => mapping(bytes32 => bool)) public hasEvaluated;
-    mapping(uint256 => EvaluationFeedback[]) public evaluationFeedbacks;
 
     uint256 public postingCount;
     uint256 public promotionReviewCount;
     JobGradeLevel[] public jobGrades;
 
+    IComplianceEngine public complianceEngine;
+
+    event ComplianceEngineSet(address indexed engine);
+
     event EvaluationCreated(bytes32 indexed employeeDID, uint256 indexed evalId, EvaluationType evalType);
     event EvaluationCompleted(bytes32 indexed employeeDID, uint256 indexed evalId, uint256 score);
     event EvaluationDisputed(bytes32 indexed employeeDID, uint256 indexed evalId);
-    event FeedbackProvided(uint256 indexed evaluationId, bytes32 indexed employeeDID);
-
     event JobPostingCreated(uint256 indexed postingId, string title, string department);
     event JobPostingUpdated(uint256 indexed postingId, RecruitmentStatus status);
     event JobApplicationSubmitted(uint256 indexed postingId, bytes32 indexed applicantDID);
     event ApplicationStatusChanged(uint256 indexed postingId, bytes32 indexed applicantDID, ApplicationStatus status);
-
     event PromotionReviewInitiated(uint256 indexed reviewId, bytes32 indexed employeeDID, JobGrade targetGrade);
     event PromotionApproved(uint256 indexed reviewId, bytes32 indexed employeeDID, JobGrade newGrade);
     event PromotionDenied(uint256 indexed reviewId, bytes32 indexed employeeDID);
-
     event SalaryAdjustmentProposed(bytes32 indexed employeeDID, int256 adjustmentPercent);
     event SalaryAdjustmentApproved(bytes32 indexed employeeDID, int256 adjustmentPercent);
-
     event JobTransferRequested(bytes32 indexed employeeDID, string toDepartment);
     event JobTransferApproved(bytes32 indexed employeeDID, string toDepartment);
-
     event LayoffProposed(bytes32 indexed employeeDID, string reason);
     event LayoffApproved(bytes32 indexed employeeDID);
-    event LayoffDenied(bytes32 indexed employeeDID);
-
     event JobGradeUpdated(JobGrade grade, uint256 minSalary, uint256 maxSalary);
 
     constructor() {
@@ -199,18 +191,20 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
         _grantRole(EVALUATOR_ROLE, msg.sender);
         _grantRole(DEPARTMENT_HEAD_ROLE, msg.sender);
 
-        _initializeJobGrades();
+        jobGrades.push(JobGradeLevel(JobGrade.Entry, 30000, 45000, "Entry level"));
+        jobGrades.push(JobGradeLevel(JobGrade.Junior, 45000, 65000, "Junior level"));
+        jobGrades.push(JobGradeLevel(JobGrade.Mid, 65000, 90000, "Mid level"));
+        jobGrades.push(JobGradeLevel(JobGrade.Senior, 90000, 120000, "Senior level"));
+        jobGrades.push(JobGradeLevel(JobGrade.Lead, 120000, 150000, "Lead level"));
+        jobGrades.push(JobGradeLevel(JobGrade.Manager, 150000, 200000, "Manager level"));
+        jobGrades.push(JobGradeLevel(JobGrade.Director, 200000, 280000, "Director level"));
+        jobGrades.push(JobGradeLevel(JobGrade.VP, 280000, 500000, "VP level"));
     }
 
-    function _initializeJobGrades() internal {
-        jobGrades.push(JobGradeLevel(JobGrade.Entry, 30000, 45000, "Entry level position"));
-        jobGrades.push(JobGradeLevel(JobGrade.Junior, 45000, 65000, "Junior level position"));
-        jobGrades.push(JobGradeLevel(JobGrade.Mid, 65000, 90000, "Mid level position"));
-        jobGrades.push(JobGradeLevel(JobGrade.Senior, 90000, 120000, "Senior level position"));
-        jobGrades.push(JobGradeLevel(JobGrade.Lead, 120000, 150000, "Lead/Principal position"));
-        jobGrades.push(JobGradeLevel(JobGrade.Manager, 150000, 200000, "Manager level position"));
-        jobGrades.push(JobGradeLevel(JobGrade.Director, 200000, 280000, "Director level position"));
-        jobGrades.push(JobGradeLevel(JobGrade.VP, 280000, 500000, "Vice President position"));
+    function setComplianceEngine(address _engine) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_engine != address(0), "Zero address");
+        complianceEngine = IComplianceEngine(_engine);
+        emit ComplianceEngineSet(_engine);
     }
 
     function updateJobGrade(JobGrade _grade, uint256 _minSalary, uint256 _maxSalary, string calldata _description) 
@@ -228,6 +222,10 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     ) external onlyRole(EVALUATOR_ROLE) whenNotPaused returns (uint256) {
         require(_employeeDID != bytes32(0), "Invalid employee DID");
         require(_evaluatorDID != bytes32(0), "Invalid evaluator DID");
+
+        if (address(complianceEngine) != address(0)) {
+            complianceEngine.guard(msg.sender, _employeeDID);
+        }
 
         uint256 evalId = employeeEvaluations[_employeeDID].length;
         
@@ -277,7 +275,7 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function disputeEvaluation(bytes32 _employeeDID, uint256 _evalId) 
-        external whenNotPaused 
+        external whenNotPaused onlyRole(HR_ADMIN_ROLE)
     {
         require(_evalId < employeeEvaluations[_employeeDID].length, "Invalid evaluation ID");
         
@@ -287,27 +285,6 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
         evaluation.status = EvaluationStatus.Disputed;
         
         emit EvaluationDisputed(_employeeDID, _evalId);
-    }
-
-    function addEvaluationFeedback(
-        uint256 _evalId,
-        bytes32 _employeeDID,
-        string calldata _feedback,
-        uint256 _rating
-    ) external whenNotPaused {
-        require(_rating <= 5, "Rating must be 0-5");
-        
-        EvaluationFeedback memory fb = EvaluationFeedback({
-            evaluationId: _evalId,
-            employeeDID: _employeeDID,
-            feedback: _feedback,
-            rating: _rating,
-            timestamp: block.timestamp
-        });
-        
-        evaluationFeedbacks[_evalId].push(fb);
-        
-        emit FeedbackProvided(_evalId, _employeeDID);
     }
 
     function createJobPosting(
@@ -323,6 +300,10 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
         require(bytes(_title).length > 0, "Title required");
         require(bytes(_department).length > 0, "Department required");
         require(_minSalary <= _maxSalary, "Invalid salary range");
+
+        if (address(complianceEngine) != address(0)) {
+            complianceEngine.guard(msg.sender, bytes32(uint256(uint160(msg.sender))));
+        }
 
         uint256 postingId = postingCount++;
         
@@ -349,7 +330,7 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function updateJobPostingStatus(uint256 _postingId, RecruitmentStatus _status) 
-        external onlyRole(HR_ADMIN_ROLE) 
+        external onlyRole(HR_ADMIN_ROLE) whenNotPaused
     {
         require(_postingId < postingCount, "Invalid posting ID");
         
@@ -395,7 +376,7 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
         uint256 _postingId,
         bytes32 _applicantDID,
         ApplicationStatus _status
-    ) external onlyRole(HR_ADMIN_ROLE) {
+    ) external onlyRole(HR_ADMIN_ROLE) whenNotPaused {
         require(_postingId < postingCount, "Invalid posting ID");
         
         JobApplication[] storage applications = jobApplications[_postingId];
@@ -449,7 +430,7 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function approvePromotion(bytes32 _employeeDID, uint256 _reviewId) 
-        external onlyRole(HR_ADMIN_ROLE) 
+        external onlyRole(HR_ADMIN_ROLE) whenNotPaused
     {
         require(_reviewId < promotionReviews[_employeeDID].length, "Invalid review ID");
         
@@ -474,6 +455,10 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
         uint256 _effectiveDate
     ) external onlyRole(HR_ADMIN_ROLE) whenNotPaused {
         require(_adjustmentPercent >= -50 && _adjustmentPercent <= 100, "Adjustment must be between -50% and 100%");
+
+        if (address(complianceEngine) != address(0)) {
+            complianceEngine.guard(msg.sender, _employeeDID);
+        }
         
         SalaryAdjustment memory adjustment = SalaryAdjustment({
             employeeDID: _employeeDID,
@@ -490,7 +475,7 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function approveSalaryAdjustment(bytes32 _employeeDID, uint256 _adjustmentIndex) 
-        external onlyRole(HR_ADMIN_ROLE) 
+        external onlyRole(HR_ADMIN_ROLE) whenNotPaused
     {
         require(_adjustmentIndex < salaryHistory[_employeeDID].length, "Invalid adjustment index");
         
@@ -505,8 +490,12 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
         string calldata _fromDepartment,
         string calldata _toDepartment,
         string calldata _reason
-    ) external whenNotPaused {
+    ) external whenNotPaused onlyRole(HR_ADMIN_ROLE) {
         require(bytes(_toDepartment).length > 0, "Destination department required");
+
+        if (address(complianceEngine) != address(0)) {
+            complianceEngine.guard(msg.sender, _employeeDID);
+        }
         
         JobTransfer memory transfer = JobTransfer({
             employeeDID: _employeeDID,
@@ -525,7 +514,7 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function approveJobTransfer(bytes32 _employeeDID, uint256 _transferIndex) 
-        external onlyRole(DEPARTMENT_HEAD_ROLE) 
+        external onlyRole(DEPARTMENT_HEAD_ROLE) whenNotPaused
     {
         require(_transferIndex < transferHistory[_employeeDID].length, "Invalid transfer index");
         
@@ -544,17 +533,22 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
         string calldata _reason,
         uint256 _noticePeriodDays,
         uint256 _effectiveDate,
-        uint256 _severanceAmount
+        string calldata _severanceHash
     ) external onlyRole(HR_ADMIN_ROLE) whenNotPaused {
         require(bytes(_reason).length > 0, "Reason required");
-        
+
+        if (address(complianceEngine) != address(0)) {
+            complianceEngine.guard(msg.sender, _employeeDID);
+        }
+
         EmployeeLayoff memory layoff = EmployeeLayoff({
             employeeDID: _employeeDID,
             reason: _reason,
             noticePeriod: _noticePeriodDays,
             effectiveDate: _effectiveDate,
-            severanceAmount: _severanceAmount,
+            severanceHash: _severanceHash,
             approved: false,
+            denied: false,
             approver: address(0),
             timestamp: block.timestamp
         });
@@ -565,12 +559,13 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function approveLayoff(bytes32 _employeeDID, uint256 _layoffIndex) 
-        external onlyRole(HR_ADMIN_ROLE) 
+        external onlyRole(HR_ADMIN_ROLE) whenNotPaused
     {
         require(_layoffIndex < layoffHistory[_employeeDID].length, "Invalid layoff index");
         
         EmployeeLayoff storage layoff = layoffHistory[_employeeDID][_layoffIndex];
         require(!layoff.approved, "Already approved");
+        require(!layoff.denied, "Already denied");
         
         layoff.approved = true;
         layoff.approver = msg.sender;
@@ -579,11 +574,16 @@ contract DecentralizedHRS is AccessControl, Pausable, ReentrancyGuard {
     }
 
     function denyLayoff(bytes32 _employeeDID, uint256 _layoffIndex) 
-        external onlyRole(HR_ADMIN_ROLE) 
+        external onlyRole(HR_ADMIN_ROLE) whenNotPaused
     {
         require(_layoffIndex < layoffHistory[_employeeDID].length, "Invalid layoff index");
-        
-        emit LayoffDenied(_employeeDID);
+
+        EmployeeLayoff storage layoff = layoffHistory[_employeeDID][_layoffIndex];
+        require(!layoff.approved, "Already approved");
+        require(!layoff.denied, "Already denied");
+
+        layoff.denied = true;
+        layoff.approver = msg.sender;
     }
 
     function getEmployeeEvaluations(bytes32 _employeeDID) 
